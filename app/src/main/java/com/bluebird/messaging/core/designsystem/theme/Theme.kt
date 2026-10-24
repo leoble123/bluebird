@@ -1,45 +1,99 @@
 package com.bluebird.messaging.core.designsystem.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 
-// Foundation palette. Prompt 2 replaces this with the full Bluebird design system.
-private val BluebirdBlue = Color(0xFF1F6FEB)
-private val BluebirdBlueLight = Color(0xFF7AB0FF)
+private val LocalBluebirdColors = staticCompositionLocalOf { LightBluebirdColors }
+private val LocalBluebirdTypography = staticCompositionLocalOf { DefaultBluebirdTypography }
+private val LocalBluebirdMotion = staticCompositionLocalOf { BluebirdMotion(reduced = false) }
+private val LocalBluebirdLayout = staticCompositionLocalOf { BluebirdLayout.forWidth(411) }
+private val LocalFrostSettings = staticCompositionLocalOf { FrostSettings() }
 
-private val LightColors = lightColorScheme(
-    primary = BluebirdBlue,
-    onPrimary = Color.White,
-    background = Color(0xFFFAF9F6),
-    onBackground = Color(0xFF14171C),
-    surface = Color(0xFFFAF9F6),
-    onSurface = Color(0xFF14171C),
-    surfaceVariant = Color(0xFFEEEDE9),
-    onSurfaceVariant = Color(0xFF5B6270),
-)
-
-private val DarkColors = darkColorScheme(
-    primary = BluebirdBlueLight,
-    onPrimary = Color(0xFF00214D),
-    background = Color(0xFF0E1116),
-    onBackground = Color(0xFFE8EAEE),
-    surface = Color(0xFF0E1116),
-    onSurface = Color(0xFFE8EAEE),
-    surfaceVariant = Color(0xFF1C2028),
-    onSurfaceVariant = Color(0xFFA3AAB8),
-)
-
+/**
+ * Bluebird's theme. Provides the design system through [BluebirdTheme.colors] etc., and maps it onto
+ * Material 3 so any stock component used in the app still matches.
+ */
 @Composable
 fun BluebirdTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    frostSettings: FrostSettings = FrostSettings(),
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
-        content = content,
+    val colors = if (darkTheme) DarkBluebirdColors else LightBluebirdColors
+    val context = LocalContext.current
+    val motion = remember(context) { BluebirdMotion.fromSystem(context) }
+    val widthDp = LocalConfiguration.current.screenWidthDp
+    val layout = remember(widthDp) { BluebirdLayout.forWidth(widthDp) }
+    val materialColors = remember(colors) { colors.toMaterial() }
+    val materialTypography = remember { DefaultBluebirdTypography.toMaterial() }
+
+    CompositionLocalProvider(
+        LocalBluebirdColors provides colors,
+        LocalBluebirdTypography provides DefaultBluebirdTypography,
+        LocalBluebirdMotion provides motion,
+        LocalBluebirdLayout provides layout,
+        LocalFrostSettings provides frostSettings,
+    ) {
+        MaterialTheme(
+            colorScheme = materialColors,
+            typography = materialTypography,
+            content = content,
+        )
+    }
+}
+
+object BluebirdTheme {
+    val colors: BluebirdColors
+        @Composable @ReadOnlyComposable get() = LocalBluebirdColors.current
+    val typography: BluebirdTypography
+        @Composable @ReadOnlyComposable get() = LocalBluebirdTypography.current
+    val motion: BluebirdMotion
+        @Composable @ReadOnlyComposable get() = LocalBluebirdMotion.current
+    val layout: BluebirdLayout
+        @Composable @ReadOnlyComposable get() = LocalBluebirdLayout.current
+    val frostSettings: FrostSettings
+        @Composable @ReadOnlyComposable get() = LocalFrostSettings.current
+}
+
+private fun BluebirdColors.toMaterial(): ColorScheme {
+    val base = if (isDark) darkColorScheme() else lightColorScheme()
+    return base.copy(
+        primary = accent,
+        onPrimary = onAccent,
+        primaryContainer = accentMuted,
+        onPrimaryContainer = onAccentMuted,
+        secondary = warm,
+        onSecondary = onWarm,
+        secondaryContainer = warmMuted,
+        onSecondaryContainer = warmStrong,
+        tertiary = warm,
+        onTertiary = onWarm,
+        background = background,
+        onBackground = textPrimary,
+        surface = surface,
+        onSurface = textPrimary,
+        surfaceVariant = surfaceSunken,
+        onSurfaceVariant = textSecondary,
+        surfaceContainerLowest = surfaceSunken,
+        surfaceContainerLow = surface,
+        surfaceContainer = surfaceRaised,
+        surfaceContainerHigh = surfaceRaised,
+        surfaceContainerHighest = surfaceRaised,
+        surfaceTint = accent,
+        outline = outline,
+        outlineVariant = separator,
+        error = danger,
+        onError = if (isDark) Palette.Abyss950 else Palette.Glacier0,
+        scrim = scrim,
     )
 }

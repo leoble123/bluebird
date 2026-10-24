@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.bluebird.messaging.AppContainer
+import com.bluebird.messaging.core.designsystem.catalog.DesignCatalogScreen
 import com.bluebird.messaging.feature.contacts.ContactsScreen
 import com.bluebird.messaging.feature.conversation.ConversationScreen
 import com.bluebird.messaging.feature.inbox.InboxScreen
@@ -18,6 +19,7 @@ object Routes {
     const val INBOX = "inbox"
     const val CONTACTS = "contacts"
     const val SETTINGS = "settings"
+    const val DESIGN_CATALOG = "design-catalog"
     const val CONVERSATION_ARG = "conversationId"
     const val CONVERSATION = "conversation/{$CONVERSATION_ARG}"
 
@@ -52,8 +54,12 @@ fun BluebirdNavHost(container: AppContainer) {
         composable(Routes.SETTINGS) {
             SettingsScreen(
                 providerName = container.messagingProvider.info.displayName,
+                onOpenDesignCatalog = { navController.navigate(Routes.DESIGN_CATALOG) },
                 onBack = { navController.popBackStack() },
             )
+        }
+        composable(Routes.DESIGN_CATALOG) {
+            DesignCatalogScreen(onBack = { navController.popBackStack() })
         }
     }
 }
