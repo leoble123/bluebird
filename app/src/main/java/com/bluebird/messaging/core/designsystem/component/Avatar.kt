@@ -58,6 +58,8 @@ fun Avatar(
     seed: String,
     modifier: Modifier = Modifier,
     size: Dp = AvatarSize.md,
+    /** Null when the name is already shown or read nearby, so screen readers don't hear it twice. */
+    contentDescription: String? = null,
 ) {
     val (top, bottom) = AvatarPalette.tones[remember(seed) { AvatarPalette.toneIndexFor(seed) }]
     val initials = remember(name) { initialsFor(name) }
@@ -68,7 +70,7 @@ fun Avatar(
             .size(size)
             .clip(CircleShape)
             .drawBehind { drawRect(brush) }
-            .semantics { contentDescription = name },
+            .then(if (contentDescription != null) Modifier.semantics { this.contentDescription = contentDescription } else Modifier),
         contentAlignment = Alignment.Center,
     ) {
         if (initials.isNotEmpty()) {

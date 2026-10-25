@@ -28,6 +28,16 @@ data class Conversation(
     val lastMessage: Message?,
     val unreadCount: Int,
     val isPinned: Boolean,
+    /** Set when the user explicitly marks a conversation unread, independent of message state. */
+    val isMarkedUnread: Boolean = false,
 ) {
     val title: String get() = participants.joinToString { it.displayName }
+    val hasUnread: Boolean get() = unreadCount > 0 || isMarkedUnread
+    val isGroup: Boolean get() = participants.size > 1
 }
+
+/** A message whose text matched a search query. */
+data class MessageMatch(
+    val conversationId: String,
+    val message: Message,
+)

@@ -31,7 +31,7 @@ fun BluebirdNavHost(container: AppContainer) {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = Routes.INBOX) {
         composable(Routes.INBOX) {
-            val vm: InboxViewModel = viewModel(factory = InboxViewModel.factory(container.messagingProvider))
+            val vm: InboxViewModel = viewModel(factory = InboxViewModel.factory(container.messagingProvider, container.appScope))
             InboxScreen(
                 viewModel = vm,
                 onOpenConversation = { navController.navigate(Routes.conversation(it)) },

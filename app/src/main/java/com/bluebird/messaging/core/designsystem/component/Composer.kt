@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
@@ -37,6 +38,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.bluebird.messaging.core.designsystem.icon.BluebirdIcons
@@ -170,6 +172,8 @@ fun BluebirdSearchField(
     state: TextFieldState,
     modifier: Modifier = Modifier,
     placeholder: String = "Search",
+    /** Called for the keyboard's Search key; typically clears focus to hide the keyboard. */
+    onSearch: () -> Unit = {},
 ) {
     val colors = BluebirdTheme.colors
     val typography = BluebirdTheme.typography
@@ -189,6 +193,8 @@ fun BluebirdSearchField(
             textStyle = typography.callout.copy(color = colors.textPrimary),
             cursorBrush = SolidColor(colors.accent),
             lineLimits = TextFieldLineLimits.SingleLine,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            onKeyboardAction = { onSearch() },
             modifier = Modifier.weight(1f).padding(start = 8.dp, top = 9.dp, bottom = 9.dp),
             decorator = { innerTextField ->
                 Box {

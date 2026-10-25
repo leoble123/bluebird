@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
@@ -72,6 +74,12 @@ class DesignSystemScreenshotTest {
 
     @Test fun inboxLight() = snap("inbox", dark = false) { Inbox() }
     @Test fun inboxDark() = snap("inbox", dark = true) { Inbox() }
+    @Test fun inboxSearch() = snap("inbox_search", dark = false) { Inbox(query = "the") }
+    @Test fun inboxEmpty() = snap("inbox_empty", dark = false) { Inbox(seed = false) }
+    @Test fun inboxUndo() = snap("inbox_undo", dark = true) { Inbox(deleteFirst = "t2") }
+
+    @Config(qualifiers = "w1280dp-h800dp-xhdpi")
+    @Test fun tabletInbox() = snap("tablet_inbox", dark = false) { Inbox() }
 
     @Test fun settingsLight() = snap("settings", dark = false) { SettingsScreen("Mock (simulated)", onOpenDesignCatalog = {}, onBack = {}) }
     @Test fun settingsDark() = snap("settings", dark = true) { SettingsScreen("Mock (simulated)", onOpenDesignCatalog = {}, onBack = {}) }
@@ -94,8 +102,16 @@ class DesignSystemScreenshotTest {
     }
 
     @Composable
-    private fun Inbox() {
-        val vm = InboxViewModel(MockMessagingProvider())
-        InboxScreen(viewModel = vm, onOpenConversation = {}, onOpenContacts = {}, onOpenSettings = {})
+    private fun Inbox(query: String = "", seed: Boolean = true, deleteFirst: String? = null) {
+        val vm = remember {
+            InboxViewModel(MockMessagingProvider(seedSampleData = seed)).also { vm -> deleteFirst?.let(vm::delete) }
+        }
+        InboxScreen(
+            viewModel = vm,
+            onOpenConversation = {},
+            onOpenContacts = {},
+            onOpenSettings = {},
+            searchState = remember { TextFieldState(query) },
+        )
     }
 }

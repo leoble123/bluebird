@@ -11,7 +11,7 @@ messages (no SMS, no iMessage). The connection status is always shown as simulat
 | --- | --- |
 | Project foundation, navigation shell, light/dark theme | Done (Prompt 1) |
 | Design system (iOS-style frosted glass) | Done (Prompt 2); browse it in Settings → Design system |
-| Inbox | Interim list using design-system rows, wired to mock data |
+| Inbox | Done (Prompt 3): search, pinned grid, swipe and long-press actions, delete with undo, new message |
 | Conversation, Contacts, Settings | Placeholder screens |
 | Local persistence (Room) | Not started |
 | Real messaging transport | Out of scope for this milestone |
@@ -81,6 +81,19 @@ Lives in `core/designsystem`. Screens read everything through `BluebirdTheme.col
 `.\gradlew.bat recordRoborazziDebug` renders the design system on the JVM (Robolectric + Roborazzi, no emulator)
 in light and dark, at phone and tablet widths, into `app/build/outputs/roborazzi/`.
 
+## Inbox
+
+`feature/inbox`. All logic lives in `InboxViewModel`; the screen only renders pre-formatted `InboxItem`s.
+
+- Large "Messages" title that scrolls away under a glass top bar, with a "Simulated" label.
+- Search across contact names, handles and message text; matches are highlighted, and content matches show the
+  matching message.
+- Pinned conversations as an avatar grid at the top (in the order they were pinned).
+- Swipe right to mark read/unread, swipe left to delete (with a 4-second undo). The same actions, plus pin/unpin,
+  are in the long-press menu and exposed to TalkBack as accessibility actions.
+- Opening a conversation marks it read. "New message" opens a contact picker that reuses an existing thread or
+  starts a new one.
+
 ## Building
 
 ### Prerequisites
@@ -122,7 +135,9 @@ You can also copy the APK to the device and open it, after allowing installs fro
 
 ## Known limitations
 
-- Everything shown is sample data; nothing persists across app restarts yet.
+- The inbox is fully functional against mock data, but changes (pins, read state, deletions, new conversations) are
+  kept in memory only and reset when the app restarts, until local persistence arrives in Prompt 5.
+- Replies are simulated: a few seconds after you send a message, the mock contact answers with a canned reply.
 - Conversation, Contacts and Settings are still placeholders.
 - No emulator or physical device testing has been done yet. Visuals have been checked only through JVM
   screenshot renders, which do not measure real-device frame timing.

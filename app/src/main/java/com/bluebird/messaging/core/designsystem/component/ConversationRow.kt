@@ -23,11 +23,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.bluebird.messaging.core.designsystem.icon.BluebirdIcons
@@ -57,10 +62,15 @@ fun ConversationRow(
     pinned: Boolean = false,
     selected: Boolean = false,
     onLongClick: (() -> Unit)? = null,
+    /** Search text to emphasize in the title and preview. */
+    highlight: String? = null,
     avatar: @Composable () -> Unit,
 ) {
     val colors = BluebirdTheme.colors
     val typography = BluebirdTheme.typography
+    val accent = colors.accent
+    val titleText = remember(title, highlight, accent) { highlightMatches(title, highlight, accent) }
+    val previewText = remember(preview, highlight, accent) { highlightMatches(preview, highlight, accent) }
     val interaction = remember { MutableInteractionSource() }
     val unreadColor = colors.unread
     Box(
@@ -98,7 +108,7 @@ fun ConversationRow(
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = title,
+                        text = titleText,
                         style = typography.headline,
                         color = colors.textPrimary,
                         maxLines = 1,
@@ -122,7 +132,7 @@ fun ConversationRow(
                     )
                 }
                 Text(
-                    text = preview,
+                    text = previewText,
                     style = typography.subheadline.copy(
                         fontWeight = if (unread) FontWeight.Medium else FontWeight.Normal,
                     ),
@@ -133,5 +143,22 @@ fun ConversationRow(
                 )
             }
         }
+    }
+}
+
+/** Bolds and tints every case-insensitive occurrence of [query] in [text]. */
+internal fun highlightMatches(text: String, query: String?, color: Color): AnnotatedString {
+    val q = query?.trim().orEmpty()
+    if (q.isEmpty()) return AnnotatedString(text)
+    return buildAnnotatedString {
+        var start = 0
+        while (true) {
+            val index = text.indexOf(q, start, ignoreCase = true)
+            if (index < 0) break
+            append(text.substring(start, index))
+            withStyle(SpanStyle(color = color, fontWeight = FontWeight.SemiBold)) { append(text.substring(index, index + q.length)) }
+            start = index + q.length
+        }
+        append(text.substring(start))
     }
 }

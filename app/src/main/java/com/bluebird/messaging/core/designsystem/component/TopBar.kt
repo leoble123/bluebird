@@ -1,5 +1,6 @@
 package com.bluebird.messaging.core.designsystem.component
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -22,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bluebird.messaging.core.designsystem.icon.BluebirdIcons
+import com.bluebird.messaging.core.designsystem.theme.BluebirdMotion
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
 import com.bluebird.messaging.core.designsystem.theme.glass
 
@@ -36,12 +39,19 @@ fun BluebirdTopBar(
     large: Boolean = false,
     glass: Boolean = false,
     subtitle: String? = null,
+    /** For screens with a [LargeTitle] in their list: show the compact title only once that has scrolled away. */
+    titleVisible: Boolean = true,
     navigation: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val typography = BluebirdTheme.typography
     val colors = BluebirdTheme.colors
     val separator = colors.separator
+    val titleAlpha = animateFloatAsState(
+        targetValue = if (titleVisible) 1f else 0f,
+        animationSpec = BluebirdTheme.motion.fade(BluebirdMotion.Durations.QUICK),
+        label = "topBarTitle",
+    )
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -54,7 +64,10 @@ fun BluebirdTopBar(
             }
             if (!large) {
                 Column(
-                    modifier = Modifier.align(Alignment.Center).padding(horizontal = 96.dp),
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(horizontal = 96.dp)
+                        .graphicsLayer { alpha = titleAlpha.value },
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
@@ -89,6 +102,34 @@ fun BluebirdTopBar(
                     .semantics { heading() },
             )
         }
+    }
+}
+
+/**
+ * iOS-style large title placed as the first item of a scrolling list, so it scrolls away under the top bar.
+ * Pair with `BluebirdTopBar(titleVisible = scrolledPastTitle)`.
+ */
+@Composable
+fun LargeTitle(
+    text: String,
+    modifier: Modifier = Modifier,
+    trailing: @Composable RowScope.() -> Unit = {},
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = BluebirdTheme.layout.gutter, end = BluebirdTheme.layout.gutter, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = text,
+            style = BluebirdTheme.typography.largeTitle,
+            color = BluebirdTheme.colors.textPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false).semantics { heading() },
+        )
+        trailing()
     }
 }
 
