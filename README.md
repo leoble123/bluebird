@@ -179,7 +179,7 @@ slowly, so they misrepresent smoothness. `preview` is optimized exactly like a r
 with the libraries' baseline profiles) but signed with the local debug key so it installs the same way:
 
 ```powershell
-.gradlew.bat assemblePreview    # app/build/outputs/apk/preview/app-preview.apk
+.\gradlew.bat assemblePreview    # app/build/outputs/apk/preview/app-preview.apk
 ```
 
 It is not for distribution; real release signing will be set up separately.
