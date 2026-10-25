@@ -1,5 +1,10 @@
 package com.bluebird.messaging.core.designsystem.component
 
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Column
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -133,10 +138,14 @@ fun MessageBubble(
     selected: Boolean = false,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
+    /** When this message is a reply: who wrote the quoted message, and its text. */
+    replyAuthor: String? = null,
+    replyText: String? = null,
 ) {
     val colors = BluebirdTheme.colors
     val layout = BluebirdTheme.layout
-    val jumbo = remember(text) { isJumboEmoji(text) }
+    val isReply = replyText != null
+    val jumbo = remember(text, isReply) { !isReply && isJumboEmoji(text) }
     val interaction = remember { MutableInteractionSource() }
     val corners = bubbleCorners(outgoing, position)
     val shape = remember(corners) {
@@ -178,7 +187,27 @@ fun MessageBubble(
             .then(clickable)
             .padding(horizontal = 13.dp, vertical = 8.dp),
     ) {
-        Text(text = text, style = BluebirdTheme.typography.body, color = content)
+        Column {
+            if (isReply) ReplyQuote(replyAuthor.orEmpty(), replyText.orEmpty(), outgoing)
+            Text(text = text, style = BluebirdTheme.typography.body, color = content)
+        }
+    }
+}
+
+/** The quoted message at the top of a reply bubble. */
+@Composable
+private fun ReplyQuote(author: String, text: String, outgoing: Boolean) {
+    val colors = BluebirdTheme.colors
+    val bar = if (outgoing) colors.onBubbleOutgoing.copy(alpha = 0.7f) else colors.accent
+    val secondary = if (outgoing) colors.onBubbleOutgoingSecondary else colors.textSecondary
+    Row(Modifier.padding(bottom = 6.dp).height(IntrinsicSize.Min)) {
+        Box(Modifier.width(3.dp).fillMaxHeight().clip(Radii.pill).background(bar))
+        Column(Modifier.padding(start = 8.dp)) {
+            if (author.isNotEmpty()) {
+                Text(author, style = BluebirdTheme.typography.caption, color = if (outgoing) colors.onBubbleOutgoing else colors.accent, maxLines = 1)
+            }
+            Text(text, style = BluebirdTheme.typography.footnote, color = secondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 

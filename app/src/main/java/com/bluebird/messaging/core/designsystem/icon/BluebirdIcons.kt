@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 object BluebirdIcons {
     val Back by lazy { icon("Back") { line(2.2f) { moveTo(15f, 5f); lineTo(8f, 12f); lineTo(15f, 19f) } } }
     val ChevronRight by lazy { icon("ChevronRight") { line(2f) { moveTo(9.5f, 6f); lineTo(15.5f, 12f); lineTo(9.5f, 18f) } } }
+    val ChevronDown by lazy { icon("ChevronDown") { line(2.2f) { moveTo(6f, 9.5f); lineTo(12f, 15.5f); lineTo(18f, 9.5f) } } }
     val Send by lazy {
         icon("Send") {
             line(2.3f) {

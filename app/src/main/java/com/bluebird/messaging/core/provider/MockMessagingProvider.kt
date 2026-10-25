@@ -5,6 +5,7 @@ import com.bluebird.messaging.core.model.Conversation
 import com.bluebird.messaging.core.model.DeliveryState
 import com.bluebird.messaging.core.model.Message
 import com.bluebird.messaging.core.model.MessageMatch
+import com.bluebird.messaging.core.model.Reaction
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -22,8 +23,8 @@ import java.util.concurrent.atomic.AtomicLong
  * Fully offline, in-memory provider with realistic sample conversations.
  * Nothing here touches a network; [info] reports it as simulated.
  *
- * When [replyScope] is given, sent messages progress Sent → Delivered → Read and the other person sends a
- * canned reply a moment later, so previews and unread indicators can be seen updating live.
+ * When [replyScope] is given, sent messages progress Sent → Delivered → Read, then the other person "types"
+ * and sends a canned reply, so previews and unread indicators can be seen updating live.
  */
 class MockMessagingProvider(
     private val clock: Clock = Clock.systemDefaultZone(),
@@ -38,6 +39,7 @@ class MockMessagingProvider(
     private val contacts = MutableStateFlow(SampleData.contacts)
     private val messages = MutableStateFlow(if (seedSampleData) SampleData.messages(clock.instant()) else emptyList())
     private val conversationMeta = MutableStateFlow(if (seedSampleData) SampleData.conversationMeta else emptyList())
+    private val typing = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
 
     override fun observeContacts(): Flow<List<Contact>> =
         contacts.map { list -> list.sortedBy { it.displayName.lowercase() } }
@@ -67,7 +69,10 @@ class MockMessagingProvider(
             ).map { it.first }
         }
 
-    override suspend fun sendMessage(conversationId: String, text: String): Message {
+    override fun observeTyping(conversationId: String): Flow<Set<String>> =
+        typing.map { it[conversationId].orEmpty() }
+
+    override suspend fun sendMessage(conversationId: String, text: String, replyToId: String?): Message {
         require(text.isNotBlank()) { "Cannot send an empty message" }
         val message = Message(
             id = newId("m"),
@@ -76,10 +81,27 @@ class MockMessagingProvider(
             text = text.trim(),
             sentAt = clock.instant(),
             deliveryState = DeliveryState.Sent,
+            replyToId = replyToId,
         )
         messages.update { it + message }
         replyScope?.launch { simulateDeliveryAndReply(message) }
         return message
+    }
+
+    override suspend fun setReaction(messageId: String, emoji: String?) {
+        messages.update { all ->
+            all.map { m ->
+                if (m.id != messageId) return@map m
+                val mine = m.reactions.firstOrNull { it.senderId == null }
+                val others = m.reactions.filterNot { it.senderId == null }
+                val next = if (emoji == null || mine?.emoji == emoji) others else others + Reaction(null, emoji)
+                m.copy(reactions = next)
+            }
+        }
+    }
+
+    override suspend fun deleteMessages(messageIds: Set<String>) {
+        messages.update { all -> all.filterNot { it.id in messageIds } }
     }
 
     override suspend fun setPinned(conversationId: String, pinned: Boolean) {
@@ -143,10 +165,16 @@ class MockMessagingProvider(
         setDeliveryState(sent.id, DeliveryState.Delivered)
         delay(1000)
         setDeliveryState(sent.id, DeliveryState.Read)
-        delay(1200)
+        delay(400)
         val meta = conversationMeta.value.firstOrNull { it.id == sent.conversationId } ?: return
         val n = replyCounter.getAndIncrement().toInt()
         val sender = meta.participantIds[n % meta.participantIds.size]
+        setTyping(sent.conversationId, sender, true)
+        try {
+            delay(1600)
+        } finally {
+            setTyping(sent.conversationId, sender, false)
+        }
         val reply = Message(
             id = newId("m"),
             conversationId = sent.conversationId,
@@ -156,6 +184,13 @@ class MockMessagingProvider(
             deliveryState = DeliveryState.Delivered,
         )
         messages.update { it + reply }
+    }
+
+    private fun setTyping(conversationId: String, contactId: String, isTyping: Boolean) {
+        typing.update { all ->
+            val current = all[conversationId].orEmpty()
+            all + (conversationId to if (isTyping) current + contactId else current - contactId)
+        }
     }
 
     private fun setDeliveryState(messageId: String, state: DeliveryState) {
@@ -208,6 +243,33 @@ class MockMessagingProvider(
             "👍",
         )
 
+        private val chatter = listOf(
+            "Morning! Coffee later?", "Can't today, swamped with work", "How about tomorrow?", "Works for me",
+            "Did you finish the report?", "Almost, sending it tonight", "Nice 👏", "Running 10 minutes late",
+            "No worries", "Have you tried the new ramen place?", "Not yet, is it good?", "Honestly the best broth in town",
+            "Okay we're going this week", "Deal", "Lol", "That meeting could have been an email",
+            "Every single time", "Weekend plans?", "Hiking if the weather holds", "Send pics!",
+        )
+
+        /** An older back-and-forth with Jordan (t2), long enough to exercise scrolling and grouping. */
+        fun longThread(now: Instant): List<Message> {
+            val start = now.minus(Duration.ofDays(21))
+            var t = start
+            return (1..160).map { i ->
+                // Bursts of quick messages separated by longer gaps, so separators and grouping both appear.
+                t = t.plus(Duration.ofMinutes(if (i % 9 == 0) 60L * 24 else if (i % 4 == 0) 95L else 2L))
+                val mine = (i / 2) % 3 == 1
+                Message(
+                    id = "h$i",
+                    conversationId = "t2",
+                    senderId = if (mine) null else "c2",
+                    text = chatter[i % chatter.size],
+                    sentAt = minOf(t, now.minus(Duration.ofMinutes(400))),
+                    deliveryState = DeliveryState.Read,
+                )
+            }
+        }
+
         fun messages(now: Instant): List<Message> {
             fun ago(minutes: Long) = now.minus(Duration.ofMinutes(minutes))
             fun incoming(id: String, t: String, from: String, text: String, min: Long, read: Boolean = true) =
@@ -215,10 +277,10 @@ class MockMessagingProvider(
             fun outgoing(id: String, t: String, text: String, min: Long, state: DeliveryState = DeliveryState.Read) =
                 Message(id, t, null, text, ago(min), state)
 
-            return listOf(
+            return longThread(now) + listOf(
                 incoming("m1", "t1", "c1", "Are we still on for dinner tonight?", 95),
-                outgoing("m2", "t1", "Yes! 7:30 at the usual place?", 92),
-                incoming("m3", "t1", "c1", "Perfect. I'll grab a table 🙌", 4, read = false),
+                outgoing("m2", "t1", "Yes! 7:30 at the usual place?", 92).copy(reactions = listOf(Reaction("c1", "❤️"))),
+                incoming("m3", "t1", "c1", "Perfect. I'll grab a table 🙌", 4, read = false).copy(replyToId = "m2"),
                 incoming("m4", "t2", "c2", "Sent you the slides from today", 300),
                 outgoing("m5", "t2", "Thanks, looking now", 290, DeliveryState.Delivered),
                 incoming("m6", "t3", "c3", "Happy birthday!! 🎉", 60 * 26),

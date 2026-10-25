@@ -12,7 +12,8 @@ messages (no SMS, no iMessage). The connection status is always shown as simulat
 | Project foundation, navigation shell, light/dark theme | Done (Prompt 1) |
 | Design system (iOS-style frosted glass) | Done (Prompt 2); browse it in Settings → Design system |
 | Inbox | Done (Prompt 3): search, pinned grid, swipe and long-press actions, delete with undo, new message |
-| Conversation, Contacts, Settings | Placeholder screens |
+| Conversation | Done (Prompt 4): timeline, replies, reactions, selection, copy/delete with undo, drafts |
+| Contacts, Settings | Placeholder screens |
 | Local persistence (Room) | Not started |
 | Real messaging transport | Out of scope for this milestone |
 
@@ -94,6 +95,25 @@ in light and dark, at phone and tablet widths, into `app/build/outputs/roborazzi
 - Opening a conversation marks it read. "New message" opens a contact picker that reuses an existing thread or
   starts a new one.
 
+## Conversation
+
+`feature/conversation`. `buildTimeline` (pure, unit-tested) turns messages into rows; `ConversationViewModel` owns
+all state; the screen only renders.
+
+- Bottom-anchored timeline: new messages appear above the composer and follow you if you're at the bottom, but
+  never yank you out of older history. A jump-to-latest button appears when scrolled up.
+- Bubble grouping for messages from the same sender within 5 minutes, and time separators after gaps of more
+  than an hour or a new day ("Today 9:41 AM", "Yesterday …", "Tuesday …", "Sat, Oct 12 at …").
+- Delivery status under your latest message only; "Not delivered" on any failed message. Tap a bubble to see its
+  time.
+- Long-press menu: tapbacks (❤️ 👍 👎 😂 ‼️ ❓), Reply, Copy, Select, Delete. Replies quote the original inside the
+  bubble and above the composer. Selection mode supports multi-copy and multi-delete. Deletes have a 4-second undo.
+- Group conversations show sender names and avatars once per run.
+- Drafts are kept per conversation when you leave and come back (in memory until Prompt 5).
+- Header shows the avatar and name; tapping it opens details, where calling is shown as unavailable and the
+  conversation is clearly labelled simulated. The attachment button lists photo and camera options as "coming in a
+  later update".
+
 ## Building
 
 ### Prerequisites
@@ -137,7 +157,9 @@ You can also copy the APK to the device and open it, after allowing installs fro
 
 - The inbox is fully functional against mock data, but changes (pins, read state, deletions, new conversations) are
   kept in memory only and reset when the app restarts, until local persistence arrives in Prompt 5.
-- Replies are simulated: a few seconds after you send a message, the mock contact answers with a canned reply.
+- Replies are simulated: after you send a message it goes Sent → Delivered → Read, the mock contact shows
+  "typing", then answers with a canned reply.
+- Attachments (photos, camera) and emoji picking are not implemented yet.
 - Conversation, Contacts and Settings are still placeholders.
 - No emulator or physical device testing has been done yet. Visuals have been checked only through JVM
   screenshot renders, which do not measure real-device frame timing.

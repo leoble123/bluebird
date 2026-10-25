@@ -1,5 +1,15 @@
 package com.bluebird.messaging.core.designsystem.component
 
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.fadeIn
@@ -49,6 +59,8 @@ fun BluebirdMenu(
     alignment: Alignment = Alignment.TopEnd,
     offset: IntOffset = IntOffset.Zero,
     transformOrigin: TransformOrigin = TransformOrigin(1f, 0f),
+    /** Custom placement (e.g. [AnchoredMenuPosition]); overrides [alignment] and [offset]. */
+    positionProvider: PopupPositionProvider? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val visibility = remember { MutableTransitionState(false) }
@@ -56,12 +68,7 @@ fun BluebirdMenu(
     if (!visibility.currentState && !visibility.targetState) return
 
     val motion = BluebirdTheme.motion
-    Popup(
-        alignment = alignment,
-        offset = offset,
-        onDismissRequest = onDismissRequest,
-        properties = PopupProperties(focusable = true),
-    ) {
+    val body: @Composable () -> Unit = {
         AnimatedVisibility(
             visibleState = visibility,
             enter = fadeIn(motion.fade(120)) + scaleIn(motion.snappy(), initialScale = 0.9f, transformOrigin = transformOrigin),
@@ -69,6 +76,12 @@ fun BluebirdMenu(
         ) {
             MenuSurface(modifier, content)
         }
+    }
+    val properties = PopupProperties(focusable = true)
+    if (positionProvider != null) {
+        Popup(popupPositionProvider = positionProvider, onDismissRequest = onDismissRequest, properties = properties, content = body)
+    } else {
+        Popup(alignment = alignment, offset = offset, onDismissRequest = onDismissRequest, properties = properties, content = body)
     }
 }
 
@@ -93,18 +106,30 @@ fun MenuItem(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     destructive: Boolean = false,
+    enabled: Boolean = true,
+    /** A short second line, e.g. why an item is unavailable. */
+    supportingText: String? = null,
 ) {
     val colors = BluebirdTheme.colors
-    val tint = if (destructive) colors.danger else colors.textPrimary
+    val tint = when {
+        !enabled -> colors.textTertiary
+        destructive -> colors.danger
+        else -> colors.textPrimary
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 44.dp)
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 16.dp),
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = BluebirdTheme.typography.body, color = tint, modifier = Modifier.weight(1f))
+        Column(Modifier.weight(1f)) {
+            Text(label, style = BluebirdTheme.typography.body, color = tint)
+            if (supportingText != null) {
+                Text(supportingText, style = BluebirdTheme.typography.footnote, color = colors.textTertiary)
+            }
+        }
         if (icon != null) {
             Spacer(Modifier.width(16.dp))
             Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
@@ -115,4 +140,64 @@ fun MenuItem(
 @Composable
 fun MenuDivider() {
     BluebirdDivider(Modifier.padding(vertical = 4.dp))
+}
+
+/** The six tapbacks offered for messages, iOS-style. */
+val Tapbacks: List<String> = listOf("❤️", "👍", "👎", "😂", "‼️", "❓")
+
+/** A row of tapbacks at the top of a message menu; the one you've already chosen is highlighted. */
+@Composable
+fun ReactionPickerRow(selected: String?, onPick: (String) -> Unit, modifier: Modifier = Modifier) {
+    val colors = BluebirdTheme.colors
+    Row(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Tapbacks.forEach { emoji ->
+            val isSelected = emoji == selected
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(if (isSelected) colors.accent else Color.Transparent)
+                    .clickable(role = Role.Button, onClickLabel = "React $emoji") { onPick(emoji) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(emoji, style = BluebirdTheme.typography.title3)
+            }
+        }
+    }
+}
+
+/**
+ * Places a popup just below its anchor, aligned to the anchor's start or end edge, flipping above the anchor when
+ * there isn't room below. Keeps a margin from the window edges.
+ */
+class AnchoredMenuPosition(
+    private val alignEnd: Boolean,
+    private val gapPx: Int,
+    private val marginPx: Int,
+) : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize,
+    ): IntOffset {
+        val endAligned = alignEnd != (layoutDirection == LayoutDirection.Rtl)
+        val rawX = if (endAligned) anchorBounds.right - popupContentSize.width else anchorBounds.left
+        val x = rawX.coerceIn(marginPx, (windowSize.width - popupContentSize.width - marginPx).coerceAtLeast(marginPx))
+        val below = anchorBounds.bottom + gapPx
+        val fitsBelow = below + popupContentSize.height <= windowSize.height - marginPx
+        val y = if (fitsBelow) below else (anchorBounds.top - gapPx - popupContentSize.height)
+        return IntOffset(x, y.coerceIn(marginPx, (windowSize.height - popupContentSize.height - marginPx).coerceAtLeast(marginPx)))
+    }
+}
+
+@Composable
+fun rememberAnchoredMenuPosition(alignEnd: Boolean): AnchoredMenuPosition {
+    val density = LocalDensity.current
+    return remember(alignEnd, density) {
+        with(density) { AnchoredMenuPosition(alignEnd, gapPx = 8.dp.roundToPx(), marginPx = 12.dp.roundToPx()) }
+    }
 }

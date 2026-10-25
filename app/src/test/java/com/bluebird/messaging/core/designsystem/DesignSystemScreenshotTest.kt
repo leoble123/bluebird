@@ -24,10 +24,14 @@ import com.bluebird.messaging.core.designsystem.catalog.StateSample
 import com.bluebird.messaging.core.designsystem.catalog.TypeSample
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
 import com.bluebird.messaging.core.provider.MockMessagingProvider
+import com.bluebird.messaging.core.data.InMemoryDraftStore
+import com.bluebird.messaging.feature.conversation.ConversationScreen
+import com.bluebird.messaging.feature.conversation.ConversationViewModel
 import com.bluebird.messaging.feature.inbox.InboxScreen
 import com.bluebird.messaging.feature.inbox.InboxViewModel
 import com.bluebird.messaging.feature.settings.SettingsScreen
 import com.github.takahirom.roborazzi.captureRoboImage
+import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -81,6 +85,21 @@ class DesignSystemScreenshotTest {
     @Config(qualifiers = "w1280dp-h800dp-xhdpi")
     @Test fun tabletInbox() = snap("tablet_inbox", dark = false) { Inbox() }
 
+    @Test fun conversationLight() = snap("conversation", dark = false) { Conversation("t1") }
+    @Test fun conversationDark() = snap("conversation", dark = true) { Conversation("t1") }
+    @Test fun conversationGroup() = snap("conversation_group", dark = false) { Conversation("t4") }
+    @Test fun conversationLongThread() = snap("conversation_long", dark = true) { Conversation("t2") }
+    @Test fun conversationReplying() = snap("conversation_reply", dark = false) {
+        Conversation("t1", draft = "On my way") { it.startReply("m3") }
+    }
+    @Test fun conversationSelecting() = snap("conversation_select", dark = false) {
+        Conversation("t2") { it.beginSelection("h160"); it.toggleSelection("h158") }
+    }
+    @Test fun conversationNew() = snap("conversation_new", dark = false) { Conversation("new") }
+
+    @Config(qualifiers = "w1280dp-h800dp-xhdpi")
+    @Test fun tabletConversation() = snap("tablet_conversation", dark = false) { Conversation("t4") }
+
     @Test fun settingsLight() = snap("settings", dark = false) { SettingsScreen("Mock (simulated)", onOpenDesignCatalog = {}, onBack = {}) }
     @Test fun settingsDark() = snap("settings", dark = true) { SettingsScreen("Mock (simulated)", onOpenDesignCatalog = {}, onBack = {}) }
 
@@ -99,6 +118,16 @@ class DesignSystemScreenshotTest {
         CatalogSection("Conversation rows") { RowSample() }
         CatalogSection("Messages") { BubbleSample() }
         CatalogSection("Inputs") { InputSample() }
+    }
+
+    @Composable
+    private fun Conversation(id: String, draft: String = "", setup: (ConversationViewModel) -> Unit = {}) {
+        val vm = remember {
+            val provider = MockMessagingProvider()
+            val conversationId = if (id == "new") runBlocking { provider.startConversation(listOf("c11")) } else id
+            ConversationViewModel(conversationId, provider, InMemoryDraftStore()).also(setup)
+        }
+        ConversationScreen(viewModel = vm, onBack = {}, draft = remember { TextFieldState(draft) })
     }
 
     @Composable

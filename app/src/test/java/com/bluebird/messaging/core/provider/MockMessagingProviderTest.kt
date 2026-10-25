@@ -140,4 +140,31 @@ class MockMessagingProviderTest {
         assertTrue(empty.observeConversations().first().isEmpty())
         assertTrue(empty.observeContacts().first().isNotEmpty())
     }
+
+    @Test
+    fun yourReactionReplacesOrTogglesButOthersStay() = runTest {
+        suspend fun reactions() = provider.observeMessages("t1").first().first { it.id == "m2" }.reactions
+        assertEquals(listOf("c1"), reactions().map { it.senderId })
+
+        provider.setReaction("m2", "👍")
+        provider.setReaction("m2", "😂")
+        assertEquals(setOf("❤️", "😂"), reactions().map { it.emoji }.toSet())
+
+        provider.setReaction("m2", "😂")
+        assertEquals(listOf("❤️"), reactions().map { it.emoji })
+    }
+
+    @Test
+    fun deletingMessagesUpdatesThePreview() = runTest {
+        provider.deleteMessages(setOf("m3"))
+        val t1 = provider.observeConversations().first().first { it.id == "t1" }
+        assertEquals("m2", t1.lastMessage?.id)
+        assertEquals(0, t1.unreadCount)
+    }
+
+    @Test
+    fun repliesRememberWhatTheyQuote() = runTest {
+        val sent = provider.sendMessage("t1", "Sounds great", replyToId = "m3")
+        assertEquals("m3", provider.observeMessages("t1").first().last { it.id == sent.id }.replyToId)
+    }
 }

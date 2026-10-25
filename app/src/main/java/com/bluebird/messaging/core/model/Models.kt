@@ -18,9 +18,18 @@ data class Message(
     val text: String,
     val sentAt: Instant,
     val deliveryState: DeliveryState,
+    /** The message this one quotes, if it was sent as a reply. */
+    val replyToId: String? = null,
+    val reactions: List<Reaction> = emptyList(),
 ) {
     val isOutgoing: Boolean get() = senderId == null
 }
+
+/** A tapback. Each person (including you, [senderId] null) has at most one reaction per message. */
+data class Reaction(
+    val senderId: String?,
+    val emoji: String,
+)
 
 data class Conversation(
     val id: String,

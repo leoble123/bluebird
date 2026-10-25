@@ -1,5 +1,7 @@
 package com.bluebird.messaging.core.designsystem.component
 
+import com.bluebird.messaging.core.designsystem.icon.BluebirdIcons
+import androidx.compose.foundation.border
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -160,7 +162,8 @@ fun UndoBar(
 fun ContactRow(
     name: String,
     detail: String?,
-    onClick: () -> Unit,
+    /** Null for a non-interactive row (e.g. a participant list). */
+    onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     avatar: @Composable () -> Unit,
 ) {
@@ -169,7 +172,7 @@ fun ContactRow(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 60.dp)
-            .clickable(role = Role.Button, onClick = onClick)
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
             .padding(horizontal = BluebirdTheme.layout.gutter, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -237,6 +240,41 @@ fun PinnedTile(
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
             modifier = Modifier.width(avatarSize + 16.dp),
+        )
+    }
+}
+
+/** The round check shown beside items in selection mode. */
+@Composable
+fun SelectionIndicator(selected: Boolean, modifier: Modifier = Modifier) {
+    val colors = BluebirdTheme.colors
+    Box(
+        modifier = modifier
+            .size(24.dp)
+            .clip(CircleShape)
+            .background(if (selected) colors.accent else Color.Transparent)
+            .then(if (selected) Modifier else Modifier.border(1.5.dp, colors.outline, CircleShape)),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) Icon(BluebirdIcons.Check, contentDescription = null, tint = colors.onAccent, modifier = Modifier.size(15.dp))
+    }
+}
+
+/** A brief glass confirmation pill ("Copied"), for feedback the system doesn't already give. */
+@Composable
+fun NoticePill(visible: Boolean, message: String, modifier: Modifier = Modifier) {
+    val motion = BluebirdTheme.motion
+    AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = fadeIn(motion.fade()) + slideInVertically(motion.gentle()) { it / 2 },
+        exit = fadeOut(motion.fade()),
+    ) {
+        Text(
+            message,
+            style = BluebirdTheme.typography.callout,
+            color = BluebirdTheme.colors.textPrimary,
+            modifier = Modifier.glass(Radii.pill).padding(horizontal = 18.dp, vertical = 10.dp),
         )
     }
 }

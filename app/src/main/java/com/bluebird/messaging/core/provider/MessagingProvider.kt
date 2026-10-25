@@ -21,7 +21,15 @@ interface MessagingProvider {
 
     fun observeContacts(): Flow<List<Contact>>
 
-    suspend fun sendMessage(conversationId: String, text: String): Message
+    suspend fun sendMessage(conversationId: String, text: String, replyToId: String? = null): Message
+
+    /** Contact ids currently typing in a conversation. */
+    fun observeTyping(conversationId: String): Flow<Set<String>>
+
+    /** Sets your reaction to a message; passing your current emoji again, or null, removes it. */
+    suspend fun setReaction(messageId: String, emoji: String?)
+
+    suspend fun deleteMessages(messageIds: Set<String>)
 
     suspend fun setPinned(conversationId: String, pinned: Boolean)
 

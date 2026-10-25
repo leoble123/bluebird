@@ -28,5 +28,28 @@ fun formatConversationTimestamp(
     }
 }
 
+/**
+ * Timeline separators: "Today 9:41 AM", "Yesterday 9:41 AM", "Tuesday 9:41 AM", then "Sat, Oct 12 at 9:41 AM",
+ * with the year added for older messages.
+ */
+fun formatSeparator(
+    instant: Instant,
+    now: Instant,
+    zone: ZoneId = ZoneId.systemDefault(),
+    locale: Locale = Locale.getDefault(),
+): String {
+    val at = instant.atZone(zone)
+    val today = now.atZone(zone).toLocalDate()
+    val daysAgo = ChronoUnit.DAYS.between(at.toLocalDate(), today)
+    val time = formatTime(instant, zone, locale)
+    return when {
+        daysAgo <= 0L -> "Today $time"
+        daysAgo == 1L -> "Yesterday $time"
+        daysAgo < 7L -> "${at.dayOfWeek.getDisplayName(TextStyle.FULL, locale)} $time"
+        at.year == today.year -> "${DateTimeFormatter.ofPattern("EEE, MMM d", locale).format(at)} at $time"
+        else -> "${DateTimeFormatter.ofPattern("MMM d, yyyy", locale).format(at)} at $time"
+    }
+}
+
 fun formatTime(instant: Instant, zone: ZoneId = ZoneId.systemDefault(), locale: Locale = Locale.getDefault()): String =
     DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale).format(instant.atZone(zone))

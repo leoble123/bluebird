@@ -11,6 +11,7 @@ import com.bluebird.messaging.AppContainer
 import com.bluebird.messaging.core.designsystem.catalog.DesignCatalogScreen
 import com.bluebird.messaging.feature.contacts.ContactsScreen
 import com.bluebird.messaging.feature.conversation.ConversationScreen
+import com.bluebird.messaging.feature.conversation.ConversationViewModel
 import com.bluebird.messaging.feature.inbox.InboxScreen
 import com.bluebird.messaging.feature.inbox.InboxViewModel
 import com.bluebird.messaging.feature.settings.SettingsScreen
@@ -43,10 +44,16 @@ fun BluebirdNavHost(container: AppContainer) {
             route = Routes.CONVERSATION,
             arguments = listOf(navArgument(Routes.CONVERSATION_ARG) { type = NavType.StringType }),
         ) { entry ->
-            ConversationScreen(
-                conversationId = entry.arguments?.getString(Routes.CONVERSATION_ARG).orEmpty(),
-                onBack = { navController.popBackStack() },
+            val conversationId = entry.arguments?.getString(Routes.CONVERSATION_ARG).orEmpty()
+            val vm: ConversationViewModel = viewModel(
+                factory = ConversationViewModel.factory(
+                    conversationId,
+                    container.messagingProvider,
+                    container.draftStore,
+                    container.appScope,
+                ),
             )
+            ConversationScreen(viewModel = vm, onBack = { navController.popBackStack() })
         }
         composable(Routes.CONTACTS) {
             ContactsScreen(onBack = { navController.popBackStack() })

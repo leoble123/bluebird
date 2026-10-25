@@ -1,5 +1,7 @@
 package com.bluebird.messaging
 
+import com.bluebird.messaging.core.data.DraftStore
+import com.bluebird.messaging.core.data.InMemoryDraftStore
 import com.bluebird.messaging.core.provider.MessagingProvider
 import com.bluebird.messaging.core.provider.MockMessagingProvider
 import kotlinx.coroutines.CoroutineScope
@@ -15,4 +17,6 @@ class AppContainer {
     val appScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val messagingProvider: MessagingProvider by lazy { MockMessagingProvider(replyScope = appScope) }
+
+    val draftStore: DraftStore by lazy { InMemoryDraftStore() }
 }

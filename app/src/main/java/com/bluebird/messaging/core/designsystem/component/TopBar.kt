@@ -1,5 +1,12 @@
 package com.bluebird.messaging.core.designsystem.component
 
+import com.bluebird.messaging.core.designsystem.theme.Radii
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.draw.clip
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -142,4 +149,64 @@ fun BackButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
         onClick = onClick,
         modifier = modifier,
     )
+}
+
+/**
+ * iOS Messages-style conversation header: back on the left, the avatar with the name beneath it in the middle
+ * (tap for details), and secondary actions on the right. Always glass, since the timeline scrolls beneath it.
+ */
+@Composable
+fun ConversationTopBar(
+    title: String,
+    onBack: () -> Unit,
+    onOpenDetails: () -> Unit,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    avatar: @Composable () -> Unit,
+    actions: @Composable RowScope.() -> Unit = {},
+) {
+    val colors = BluebirdTheme.colors
+    val typography = BluebirdTheme.typography
+    val separator = colors.separator
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .glass()
+            .drawBehind { drawLine(separator, Offset(0f, size.height), Offset(size.width, size.height), strokeWidth = 1f) }
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .height(72.dp)
+            .padding(horizontal = 4.dp),
+    ) {
+        BackButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart))
+        Column(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = 72.dp)
+                .clip(Radii.card)
+                .clickable(role = Role.Button, onClickLabel = "Show details", onClick = onOpenDetails)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(Modifier.size(36.dp)) { avatar() }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                Text(
+                    title,
+                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                    color = colors.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false).semantics { heading() },
+                )
+                Icon(BluebirdIcons.ChevronRight, contentDescription = null, tint = colors.textTertiary, modifier = Modifier.size(12.dp))
+            }
+            if (subtitle != null) {
+                Text(subtitle, style = typography.caption2, color = colors.textSecondary, maxLines = 1)
+            }
+        }
+        Row(
+            modifier = Modifier.align(Alignment.CenterEnd),
+            verticalAlignment = Alignment.CenterVertically,
+            content = actions,
+        )
+    }
 }
