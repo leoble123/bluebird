@@ -1,6 +1,13 @@
 package com.bluebird.messaging.core.designsystem.component
 
 import com.bluebird.messaging.core.designsystem.theme.Radii
+import com.bluebird.messaging.core.designsystem.theme.ScrollEdge
+import com.bluebird.messaging.core.designsystem.theme.liquidGlass
+import com.bluebird.messaging.core.designsystem.theme.scrollEdgeEffect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.draw.clip
@@ -33,11 +40,11 @@ import androidx.compose.ui.unit.dp
 import com.bluebird.messaging.core.designsystem.icon.BluebirdIcons
 import com.bluebird.messaging.core.designsystem.theme.BluebirdMotion
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
-import com.bluebird.messaging.core.designsystem.theme.glass
 
 /**
- * Screen header. [large] shows an iOS-style large title under the bar. [glass] turns the bar into frosted glass
- * with a hairline underneath, for when content scrolls beneath it (place the bar over a [glassSource]).
+ * Screen header in the iOS 26 style: floating controls over the content, no solid bar. [large] shows a large title
+ * under the controls. [glass] adds the scroll edge effect, a soft blur over content scrolling beneath
+ * (place the bar over a [glassSource]).
  */
 @Composable
 fun BluebirdTopBar(
@@ -48,12 +55,13 @@ fun BluebirdTopBar(
     subtitle: String? = null,
     /** For screens with a [LargeTitle] in their list: show the compact title only once that has scrolled away. */
     titleVisible: Boolean = true,
+    /** Background the scroll edge effect fades into; match the screen (e.g. the grouped gray in Settings). */
+    edgeColor: Color = BluebirdTheme.colors.background,
     navigation: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val typography = BluebirdTheme.typography
     val colors = BluebirdTheme.colors
-    val separator = colors.separator
     val titleAlpha = animateFloatAsState(
         targetValue = if (titleVisible) 1f else 0f,
         animationSpec = BluebirdTheme.motion.fade(BluebirdMotion.Durations.QUICK),
@@ -62,10 +70,10 @@ fun BluebirdTopBar(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (glass) Modifier.glass().drawBehind { drawLine(separator, Offset(0f, size.height), Offset(size.width, size.height), strokeWidth = 1f) } else Modifier)
+            .then(if (glass) Modifier.scrollEdgeEffect(ScrollEdge.Top, edgeColor) else Modifier)
             .windowInsetsPadding(WindowInsets.statusBars),
     ) {
-        Box(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp)) {
+        Box(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 12.dp)) {
             Row(Modifier.align(Alignment.CenterStart), verticalAlignment = Alignment.CenterVertically) {
                 navigation?.invoke()
             }
@@ -143,17 +151,13 @@ fun LargeTitle(
 /** Standard back affordance for [BluebirdTopBar]. */
 @Composable
 fun BackButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    BluebirdIconButton(
-        icon = BluebirdIcons.Back,
-        contentDescription = "Back",
-        onClick = onClick,
-        modifier = modifier,
-    )
+    GlassIconButton(icon = BluebirdIcons.Back, contentDescription = "Back", onClick = onClick, modifier = modifier)
 }
 
 /**
- * iOS Messages-style conversation header: back on the left, the avatar with the name beneath it in the middle
- * (tap for details), and secondary actions on the right. Always glass, since the timeline scrolls beneath it.
+ * The iOS 26 Messages conversation header: a round glass Back button on the left and, in the middle, the
+ * avatar with the name in a glass capsule beneath it (tap for details). No bar: the timeline scrolls under a
+ * soft scroll edge effect.
  */
 @Composable
 fun ConversationTopBar(
@@ -167,44 +171,52 @@ fun ConversationTopBar(
 ) {
     val colors = BluebirdTheme.colors
     val typography = BluebirdTheme.typography
-    val separator = colors.separator
+    val interaction = remember { MutableInteractionSource() }
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .glass()
-            .drawBehind { drawLine(separator, Offset(0f, size.height), Offset(size.width, size.height), strokeWidth = 1f) }
+            .scrollEdgeEffect(ScrollEdge.Top)
             .windowInsetsPadding(WindowInsets.statusBars)
-            .height(72.dp)
-            .padding(horizontal = 4.dp),
+            .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 22.dp),
     ) {
-        BackButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart))
+        BackButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart).padding(top = 6.dp))
         Column(
             modifier = Modifier
-                .align(Alignment.Center)
-                .padding(horizontal = 72.dp)
-                .clip(Radii.card)
-                .clickable(role = Role.Button, onClickLabel = "Show details", onClick = onOpenDetails)
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .align(Alignment.TopCenter)
+                .padding(horizontal = 64.dp)
+                .clickable(
+                    interactionSource = interaction,
+                    indication = null,
+                    role = Role.Button,
+                    onClickLabel = "Show details",
+                    onClick = onOpenDetails,
+                ),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Box(Modifier.size(36.dp)) { avatar() }
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+            Box(Modifier.size(52.dp)) { avatar() }
+            Row(
+                modifier = Modifier
+                    .padding(top = 4.dp)
+                    .liquidGlass(RoundedCornerShape(percent = 50), interaction)
+                    .padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
                     title,
-                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                    style = typography.footnote.copy(fontWeight = FontWeight.SemiBold),
                     color = colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false).semantics { heading() },
                 )
-                Icon(BluebirdIcons.ChevronRight, contentDescription = null, tint = colors.textTertiary, modifier = Modifier.size(12.dp))
+                Icon(BluebirdIcons.ChevronRight, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(12.dp))
             }
             if (subtitle != null) {
-                Text(subtitle, style = typography.caption2, color = colors.textSecondary, maxLines = 1)
+                Text(subtitle, style = typography.caption2, color = colors.textSecondary, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
             }
         }
         Row(
-            modifier = Modifier.align(Alignment.CenterEnd),
+            modifier = Modifier.align(Alignment.TopEnd).padding(top = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             content = actions,
         )

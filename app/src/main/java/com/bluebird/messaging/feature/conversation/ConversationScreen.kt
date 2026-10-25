@@ -2,8 +2,13 @@ package com.bluebird.messaging.feature.conversation
 
 import android.content.ClipData
 import android.os.Build
+import com.bluebird.messaging.core.designsystem.component.GlassIconButton
+import com.bluebird.messaging.core.designsystem.component.GlassTextButton
+import com.bluebird.messaging.core.designsystem.theme.ScrollEdge
+import com.bluebird.messaging.core.designsystem.theme.scrollEdgeEffect
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.animation.core.Animatable
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,11 +22,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,23 +38,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.bluebird.messaging.core.designsystem.component.BluebirdButton
 import com.bluebird.messaging.core.designsystem.component.BluebirdComposer
 import com.bluebird.messaging.core.designsystem.component.BluebirdMenu
 import com.bluebird.messaging.core.designsystem.component.BluebirdTopBar
 import com.bluebird.messaging.core.designsystem.component.BubbleRow
-import com.bluebird.messaging.core.designsystem.component.ButtonVariant
 import com.bluebird.messaging.core.designsystem.component.ConversationTopBar
 import com.bluebird.messaging.core.designsystem.component.EmptyState
 import com.bluebird.messaging.core.designsystem.component.MenuItem
@@ -80,7 +78,8 @@ fun ConversationScreen(
     val clipboard = LocalClipboard.current
 
     var menuFor by remember { mutableStateOf<String?>(null) }
-    var timeShownFor by rememberSaveable { mutableStateOf<String?>(null) }
+    val reveal = remember { Animatable(0f) }
+    val revealMax = with(LocalDensity.current) { TimestampRevealWidth.toPx() }
     var attachMenu by remember { mutableStateOf(false) }
     var showDetails by rememberSaveable { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
@@ -110,13 +109,14 @@ fun ConversationScreen(
         MessageActions(
             openMenu = { menuFor = it },
             closeMenu = { menuFor = null },
-            toggleTime = { id -> timeShownFor = if (timeShownFor == id) null else id },
             reply = viewModel::startReply,
             copy = { id -> copy(viewModel.textOf(setOf(id))) },
             react = viewModel::react,
             select = viewModel::beginSelection,
             toggleSelected = viewModel::toggleSelection,
             delete = { id -> viewModel.deleteMessages(setOf(id)) },
+            revealTimesBy = { delta -> scope.launch { reveal.snapTo((reveal.value + delta).coerceIn(0f, revealMax)) } },
+            endReveal = { scope.launch { reveal.animateTo(0f) } },
         )
     }
 
@@ -130,7 +130,7 @@ fun ConversationScreen(
                         title = "${state.selection.size} Selected",
                         glass = true,
                         navigation = {
-                            BluebirdButton("Cancel", onClick = viewModel::endSelection, variant = ButtonVariant.Plain)
+                            GlassTextButton("Cancel", onClick = viewModel::endSelection)
                         },
                     )
                 } else {
@@ -185,7 +185,7 @@ fun ConversationScreen(
                                 "sent to ${state.title}.",
                             modifier = Modifier.padding(padding),
                         )
-                        else -> Timeline(state, padding, menuFor, timeShownFor, actions)
+                        else -> Timeline(state, padding, menuFor, revealPx = { reveal.value }, actions = actions)
                     }
                 }
                 Box(
@@ -212,7 +212,7 @@ private fun Timeline(
     state: ConversationUiState,
     padding: PaddingValues,
     menuFor: String?,
-    timeShownFor: String?,
+    revealPx: () -> Float,
     actions: MessageActions,
 ) {
     val listState = rememberLazyListState()
@@ -260,26 +260,22 @@ private fun Timeline(
                         selecting = state.selecting,
                         selected = item.id in state.selection,
                         menuExpanded = menuFor == item.id,
-                        showTime = timeShownFor == item.id,
+                        revealPx = revealPx,
                         actions = actions,
                     )
                 }
             }
         }
         if (showJump) {
-            Box(
-                Modifier
+            GlassIconButton(
+                icon = BluebirdIcons.ChevronDown,
+                contentDescription = "Jump to latest",
+                onClick = { scope.launch { listState.animateScrollToItem(0) } },
+                size = 40.dp,
+                modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = padding.calculateBottomPadding() + 12.dp)
-                    .size(40.dp)
-                    .glass(CircleShape)
-                    .clickable(role = Role.Button, onClickLabel = "Jump to latest") {
-                        scope.launch { listState.animateScrollToItem(0) }
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(BluebirdIcons.ChevronDown, contentDescription = "Jump to latest", tint = BluebirdTheme.colors.accent)
-            }
+                    .padding(end = 16.dp, bottom = padding.calculateBottomPadding() + 12.dp),
+            )
         }
     }
 }
@@ -310,18 +306,16 @@ private fun AttachmentMenu(expanded: Boolean, onDismiss: () -> Unit) {
 
 @Composable
 private fun SelectionActionBar(count: Int, onCopy: () -> Unit, onDelete: () -> Unit) {
-    val separator = BluebirdTheme.colors.separator
     Row(
         Modifier
             .fillMaxWidth()
-            .glass()
-            .drawBehind { drawLine(separator, Offset.Zero, Offset(size.width, 0f), strokeWidth = 1f) }
+            .scrollEdgeEffect(ScrollEdge.Bottom)
             .navigationBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BluebirdButton("Copy", onClick = onCopy, variant = ButtonVariant.Plain, leadingIcon = BluebirdIcons.Copy, enabled = count > 0)
+        GlassIconButton(BluebirdIcons.Copy, "Copy", onClick = onCopy, enabled = count > 0)
         Spacer(Modifier.weight(1f))
-        BluebirdButton("Delete", onClick = onDelete, variant = ButtonVariant.Destructive, leadingIcon = BluebirdIcons.Trash, enabled = count > 0)
+        GlassIconButton(BluebirdIcons.Trash, "Delete", onClick = onDelete, enabled = count > 0)
     }
 }

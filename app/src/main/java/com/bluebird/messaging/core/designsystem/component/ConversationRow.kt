@@ -41,7 +41,7 @@ import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
 
 private val UnreadDotSize = 9.dp
 private val UnreadGutter = 14.dp
-private val RowAvatarSize = AvatarSize.lg
+private val RowAvatarSize = 48.dp
 
 /** Start inset for dividers between rows, so they line up with the text rather than the avatar. */
 val ConversationRowDividerInset: Dp = UnreadGutter + RowAvatarSize + 12.dp
@@ -126,9 +126,15 @@ fun ConversationRow(
                     Text(
                         text = timestamp,
                         style = typography.footnote,
-                        color = if (unread) colors.accent else colors.textSecondary,
+                        color = colors.textSecondary,
                         maxLines = 1,
                         modifier = Modifier.padding(start = 6.dp),
+                    )
+                    Icon(
+                        BluebirdIcons.ChevronRight,
+                        contentDescription = null,
+                        tint = colors.textTertiary,
+                        modifier = Modifier.padding(start = 4.dp).size(13.dp),
                     )
                 }
                 Text(

@@ -179,4 +179,22 @@ class InboxViewModelTest {
         assertFalse(state.hasAnyConversations)
         assertTrue(state.pinned.isEmpty() && state.conversations.isEmpty())
     }
+
+    @Test
+    fun unreadFilterFlattensPinsIntoTheList() = runTest {
+        val vm = newViewModel()
+        vm.setFilter(InboxFilter.Unread)
+        val state = vm.uiState.value
+        assertEquals(InboxFilter.Unread, state.filter)
+        assertTrue(state.pinned.isEmpty())
+        assertEquals(setOf("t1", "t4"), state.conversations.map { it.id }.toSet())
+        assertTrue(state.conversations.all { it.unread })
+
+        vm.setRead("t1", read = true)
+        vm.setRead("t4", read = true)
+        assertTrue(vm.uiState.value.conversations.isEmpty())
+
+        vm.setFilter(InboxFilter.All)
+        assertEquals(listOf("t1", "t5", "t6"), vm.uiState.value.pinned.map { it.id })
+    }
 }

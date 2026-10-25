@@ -6,15 +6,18 @@ import androidx.compose.ui.graphics.Color
 /**
  * Raw palette. Screens never use these directly; they read semantic roles from [BluebirdColors].
  *
- * Identity: a confident cobalt and a warm apricot used sparingly, over clean iOS-style neutrals.
+ * Identity: iOS 26 system blue (Apple HIG: #0088FF light, #0091FF dark) and a warm apricot used sparingly,
+ * over iOS-style neutrals.
  */
 internal object Palette {
-    val Cobalt500 = Color(0xFF1F5FE0)
-    val Cobalt600 = Color(0xFF1A4FC0)
-    val Cobalt400 = Color(0xFF3F78F0)
-    val Cobalt300 = Color(0xFF6E9BFF)
-    val Cobalt100 = Color(0xFFE2EBFD)
-    val Cobalt900 = Color(0xFF0E2350)
+    val BlueLight = Color(0xFF0088FF)
+    val BlueLightPressed = Color(0xFF0070D9)
+    val BlueDark = Color(0xFF0091FF)
+    val BlueDarkPressed = Color(0xFF0078D6)
+    val BlueTintLight = Color(0xFFE0EFFF)
+    val BlueTintDark = Color(0xFF0A2A4A)
+    val BlueInkLight = Color(0xFF006BD6)
+    val BlueInkDark = Color(0xFF5CB8FF)
 
     val Apricot400 = Color(0xFFF2955E)
     val Apricot300 = Color(0xFFF5A673)
@@ -106,11 +109,11 @@ data class BluebirdColors(
 
 val LightBluebirdColors = BluebirdColors(
     isDark = false,
-    accent = Palette.Cobalt500,
-    accentPressed = Palette.Cobalt600,
+    accent = Palette.BlueLight,
+    accentPressed = Palette.BlueLightPressed,
     onAccent = Color.White,
-    accentMuted = Palette.Cobalt100,
-    onAccentMuted = Palette.Cobalt600,
+    accentMuted = Palette.BlueTintLight,
+    onAccentMuted = Palette.BlueInkLight,
     warm = Palette.Apricot400,
     onWarm = Palette.Apricot900,
     warmStrong = Palette.Apricot700,
@@ -125,12 +128,12 @@ val LightBluebirdColors = BluebirdColors(
     textTertiary = Palette.Gray500,
     separator = Palette.Gray200,
     outline = Palette.Gray300,
-    bubbleOutgoing = Palette.Cobalt500,
+    bubbleOutgoing = Palette.BlueLight,
     onBubbleOutgoing = Color.White,
     onBubbleOutgoingSecondary = Color.White.copy(alpha = 0.72f),
     bubbleIncoming = Palette.Gray100,
     onBubbleIncoming = Palette.Ink,
-    unread = Palette.Cobalt500,
+    unread = Palette.BlueLight,
     success = Palette.Green500,
     danger = Palette.Red500,
     callAccept = Palette.Green500,
@@ -143,11 +146,11 @@ val LightBluebirdColors = BluebirdColors(
 
 val DarkBluebirdColors = BluebirdColors(
     isDark = true,
-    accent = Palette.Cobalt300,
-    accentPressed = Palette.Cobalt400,
-    onAccent = Palette.Cobalt900,
-    accentMuted = Color(0xFF15264A),
-    onAccentMuted = Palette.Cobalt300,
+    accent = Palette.BlueDark,
+    accentPressed = Palette.BlueDarkPressed,
+    onAccent = Color.White,
+    accentMuted = Palette.BlueTintDark,
+    onAccentMuted = Palette.BlueInkDark,
     warm = Palette.Apricot300,
     onWarm = Palette.Apricot900,
     warmStrong = Palette.Apricot300,
@@ -162,13 +165,12 @@ val DarkBluebirdColors = BluebirdColors(
     textTertiary = Palette.Graphite400,
     separator = Palette.Graphite600,
     outline = Palette.Graphite500,
-    // Slightly deeper than the dark-mode accent so white text keeps comfortable contrast.
-    bubbleOutgoing = Color(0xFF2F6BF0),
+    bubbleOutgoing = Palette.BlueDark,
     onBubbleOutgoing = Color.White,
     onBubbleOutgoingSecondary = Color.White.copy(alpha = 0.7f),
     bubbleIncoming = Palette.Graphite750,
     onBubbleIncoming = Color.White,
-    unread = Palette.Cobalt300,
+    unread = Palette.BlueDark,
     success = Palette.Green400,
     danger = Palette.Red400,
     callAccept = Palette.Green400,

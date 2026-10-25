@@ -64,6 +64,7 @@ dependencies {
     // Backdrop blur for iOS-style frosted glass bars (GPU blur on Android 12+, translucent fallback below).
     implementation(libs.haze)
     implementation(libs.haze.blur)
+    implementation(libs.haze.glass)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

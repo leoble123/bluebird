@@ -80,6 +80,7 @@ class DesignSystemScreenshotTest {
     @Test fun inboxDark() = snap("inbox", dark = true) { Inbox() }
     @Test fun inboxSearch() = snap("inbox_search", dark = false) { Inbox(query = "the") }
     @Test fun inboxEmpty() = snap("inbox_empty", dark = false) { Inbox(seed = false) }
+    @Test fun inboxDarkSearch() = snap("inbox_search", dark = true) { Inbox(query = "dinner") }
     @Test fun inboxUndo() = snap("inbox_undo", dark = true) { Inbox(deleteFirst = "t2") }
 
     @Config(qualifiers = "w1280dp-h800dp-xhdpi")

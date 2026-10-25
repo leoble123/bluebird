@@ -30,11 +30,8 @@ object Radii {
     val lg: Dp = 20.dp
     val xl: Dp = 28.dp
 
-    val bubble: Dp = 20.dp
-    /** Corner on the side where bubbles in a group touch. */
-    val bubbleJoined: Dp = 6.dp
-    /** The facet: the tapered outer corner on the last bubble of a group. */
-    val bubbleFacet: Dp = 3.dp
+    /** Message bubble corner radius, matching iOS Messages. */
+    val bubble: Dp = 18.dp
 
     val pill = RoundedCornerShape(percent = 50)
     val card = RoundedCornerShape(lg)

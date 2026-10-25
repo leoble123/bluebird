@@ -1,5 +1,17 @@
 package com.bluebird.messaging.core.designsystem.component
 
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.graphics.asAndroidPath
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -51,27 +63,54 @@ import kotlin.math.roundToInt
 /** Where a bubble sits within a run of consecutive messages from the same sender. */
 enum class BubblePosition { Single, First, Middle, Last }
 
-@Immutable
-data class BubbleCorners(val topStart: Dp, val topEnd: Dp, val bottomEnd: Dp, val bottomStart: Dp)
+/** Width reserved on the outer side of every bubble for the tail, so bubbles in a group stay aligned. */
+val BubbleTailWidth: Dp = 6.dp
+
+/** As in iOS Messages, only the last bubble of a run from one sender carries a tail. */
+fun bubbleHasTail(position: BubblePosition): Boolean =
+    position == BubblePosition.Single || position == BubblePosition.Last
 
 /**
- * Corner geometry. Bubbles in a group tighten their corners where they touch; the last bubble of a group gets the
- * "facet", a sharply tapered outer-bottom corner that replaces a speech tail.
+ * The iOS Messages bubble: a fully rounded body, plus a small curled tail at the bottom outer corner when [tail]
+ * is set. The body always stops [BubbleTailWidth] short of the outer edge so tailed and untailed bubbles align.
  */
-fun bubbleCorners(outgoing: Boolean, position: BubblePosition): BubbleCorners {
-    val round = Radii.bubble
-    val joined = Radii.bubbleJoined
-    val facet = Radii.bubbleFacet
-    val (outerTop, outerBottom) = when (position) {
-        BubblePosition.Single -> round to facet
-        BubblePosition.First -> round to joined
-        BubblePosition.Middle -> joined to joined
-        BubblePosition.Last -> joined to facet
-    }
-    return if (outgoing) {
-        BubbleCorners(topStart = round, topEnd = outerTop, bottomEnd = outerBottom, bottomStart = round)
-    } else {
-        BubbleCorners(topStart = outerTop, topEnd = round, bottomEnd = round, bottomStart = outerBottom)
+class BubbleShape(
+    private val outgoing: Boolean,
+    private val tail: Boolean,
+    private val radius: Dp = Radii.bubble,
+) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline = with(density) {
+        val w = size.width
+        val h = size.height
+        val t = BubbleTailWidth.toPx()
+        val bodyRight = w - t
+        val r = min(radius.toPx(), min(bodyRight, h) / 2f)
+        val body = Path().apply {
+            addRoundRect(RoundRect(0f, 0f, bodyRight, h, CornerRadius(r)))
+        }
+        val path = if (!tail) {
+            body
+        } else {
+            val horn = Path().apply {
+                // Fill the body's outer bottom corner square, then add the hook.
+                moveTo(bodyRight - r, h - r)
+                lineTo(bodyRight, h - r)
+                lineTo(bodyRight, h - 12.dp.toPx())
+                // Outer edge sweeps down and out to the tip at the bottom corner…
+                cubicTo(bodyRight, h - 5.dp.toPx(), bodyRight + t * 0.6f, h - 1.dp.toPx(), w, h)
+                // …and the inner edge curls back up and over into the bottom of the body.
+                cubicTo(w - 3.dp.toPx(), h - 1.dp.toPx(), bodyRight, h - 5.dp.toPx(), bodyRight - 5.dp.toPx(), h - 4.dp.toPx())
+                cubicTo(bodyRight - 8.dp.toPx(), h - 3.5.dp.toPx(), bodyRight - 10.dp.toPx(), h, bodyRight - 14.dp.toPx(), h)
+                lineTo(bodyRight - r, h)
+                close()
+            }
+            Path().apply { op(body, horn, PathOperation.Union) }
+        }
+        val mirror = outgoing == (layoutDirection == LayoutDirection.Rtl)
+        if (mirror) {
+            path.asAndroidPath().transform(android.graphics.Matrix().apply { setScale(-1f, 1f, w / 2f, 0f) })
+        }
+        Outline.Generic(path)
     }
 }
 
@@ -138,6 +177,8 @@ fun MessageBubble(
     selected: Boolean = false,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
+    /** Double-tap, as in iOS, opens the Tapback picker. */
+    onDoubleClick: (() -> Unit)? = null,
     /** When this message is a reply: who wrote the quoted message, and its text. */
     replyAuthor: String? = null,
     replyText: String? = null,
@@ -147,16 +188,15 @@ fun MessageBubble(
     val isReply = replyText != null
     val jumbo = remember(text, isReply) { !isReply && isJumboEmoji(text) }
     val interaction = remember { MutableInteractionSource() }
-    val corners = bubbleCorners(outgoing, position)
-    val shape = remember(corners) {
-        RoundedCornerShape(corners.topStart, corners.topEnd, corners.bottomEnd, corners.bottomStart)
-    }
-    val clickable = if (onClick != null || onLongClick != null) {
+    val tail = bubbleHasTail(position)
+    val shape = remember(outgoing, tail) { BubbleShape(outgoing, tail) }
+    val clickable = if (onClick != null || onLongClick != null || onDoubleClick != null) {
         Modifier.combinedClickable(
             interactionSource = interaction,
             indication = null,
             onClick = onClick ?: {},
             onLongClick = onLongClick,
+            onDoubleClick = onDoubleClick,
         )
     } else {
         Modifier
@@ -185,7 +225,12 @@ fun MessageBubble(
             .clip(shape)
             .background(container)
             .then(clickable)
-            .padding(horizontal = 13.dp, vertical = 8.dp),
+            .padding(
+                start = if (outgoing) 12.dp else 12.dp + BubbleTailWidth,
+                end = if (outgoing) 12.dp + BubbleTailWidth else 12.dp,
+                top = 7.dp,
+                bottom = 7.dp,
+            ),
     ) {
         Column {
             if (isReply) ReplyQuote(replyAuthor.orEmpty(), replyText.orEmpty(), outgoing)
@@ -252,17 +297,18 @@ fun TypingIndicator(modifier: Modifier = Modifier) {
     } else {
         null
     }
-    val corners = bubbleCorners(outgoing = false, position = BubblePosition.Single)
+    val shape = remember { BubbleShape(outgoing = false, tail = true) }
     Box(
         modifier = modifier
             .semantics { contentDescription = "Typing" }
-            .clip(RoundedCornerShape(corners.topStart, corners.topEnd, corners.bottomEnd, corners.bottomStart))
+            .clip(shape)
             .background(colors.bubbleIncoming)
-            .size(width = 58.dp, height = 36.dp)
+            .size(width = 64.dp, height = 36.dp)
             .drawBehind {
                 val radius = 3.6.dp.toPx()
                 val gap = 9.dp.toPx()
-                val startX = size.width / 2 - gap
+                val tailPx = BubbleTailWidth.toPx()
+                val startX = tailPx + (size.width - tailPx) / 2 - gap
                 val p = phase?.value
                 for (i in 0..2) {
                     val alpha = if (p == null) {
@@ -277,33 +323,47 @@ fun TypingIndicator(modifier: Modifier = Modifier) {
     )
 }
 
-/** A reaction ("tapback") pinned to the corner of a bubble, ringed in the background color. Yours are cobalt. */
+/**
+ * Tapbacks, iOS-style: each reaction is a small round badge ringed in the background color, stacked when there are
+ * several, with a little trailing dot pointing at the bubble. Yours is drawn in the accent color.
+ */
 @Composable
-fun ReactionPill(
-    emoji: String,
+fun TapbackBadges(
+    tapbacks: List<Pair<String, Boolean>>,
     modifier: Modifier = Modifier,
-    mine: Boolean = false,
-    count: Int = 1,
+    /** Which side of the badges the bubble is on, so the trailing dot points at it. */
+    bubbleOnStart: Boolean = true,
 ) {
     val colors = BluebirdTheme.colors
-    Row(
-        modifier = modifier
-            .clip(Radii.pill)
-            .background(colors.background)
-            .padding(2.dp)
-            .clip(Radii.pill)
-            .background(if (mine) colors.accent else colors.bubbleIncoming)
-            .padding(horizontal = 7.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(emoji, style = BluebirdTheme.typography.callout)
-        if (count > 1) {
-            Spacer(Modifier.width(3.dp))
-            Text(
-                count.toString(),
-                style = BluebirdTheme.typography.caption,
-                color = if (mine) colors.onAccent else colors.textSecondary,
-            )
+    val ring = colors.background
+    val shown = tapbacks.take(3)
+    Box(modifier) {
+        shown.forEachIndexed { index, (emoji, mine) ->
+            Box(
+                Modifier
+                    .offset(x = (index * 16).dp)
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(ring)
+                    .padding(2.dp)
+                    .clip(CircleShape)
+                    .background(if (mine) colors.accent else colors.bubbleIncoming),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(emoji, style = BluebirdTheme.typography.footnote.copy(fontSize = 15.sp, lineHeight = 17.sp))
+            }
         }
+        val dotColor = if (shown.firstOrNull()?.second == true) colors.accent else colors.bubbleIncoming
+        Box(
+            Modifier
+                .align(if (bubbleOnStart) Alignment.BottomStart else Alignment.BottomEnd)
+                .offset(x = if (bubbleOnStart) (-1).dp else 1.dp, y = 6.dp)
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(ring)
+                .padding(1.5.dp)
+                .clip(CircleShape)
+                .background(dotColor),
+        )
     }
 }

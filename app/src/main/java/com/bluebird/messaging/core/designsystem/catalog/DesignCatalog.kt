@@ -31,6 +31,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.bluebird.messaging.core.designsystem.component.GlassTextButton
+import com.bluebird.messaging.core.designsystem.component.GroupedIconButton
+import com.bluebird.messaging.core.designsystem.component.GlassButtonGroup
+import com.bluebird.messaging.core.designsystem.component.GlassIconButton
 import com.bluebird.messaging.core.designsystem.component.Avatar
 import com.bluebird.messaging.core.designsystem.component.BackButton
 import com.bluebird.messaging.core.designsystem.component.BluebirdButton
@@ -56,7 +60,7 @@ import com.bluebird.messaging.core.designsystem.component.IconBadge
 import com.bluebird.messaging.core.designsystem.component.IconButtonStyle
 import com.bluebird.messaging.core.designsystem.component.LoadingState
 import com.bluebird.messaging.core.designsystem.component.MessageBubble
-import com.bluebird.messaging.core.designsystem.component.ReactionPill
+import com.bluebird.messaging.core.designsystem.component.TapbackBadges
 import com.bluebird.messaging.core.designsystem.component.SectionHeader
 import com.bluebird.messaging.core.designsystem.component.StatusPill
 import com.bluebird.messaging.core.designsystem.component.TypingIndicator
@@ -115,6 +119,7 @@ fun CatalogSection(title: String, content: @Composable () -> Unit) {
 fun GlassSample() {
     val colors = BluebirdTheme.colors
     GlassHost {
+        // Liquid Glass floating controls over the same content.
         Box(
             Modifier
                 .padding(horizontal = 16.dp)
@@ -141,6 +146,24 @@ fun GlassSample() {
             ) {
                 Text("Glass bar", style = BluebirdTheme.typography.headline, color = colors.textPrimary, modifier = Modifier.weight(1f))
                 StatusPill("Simulated")
+            }
+            Row(
+                Modifier.align(Alignment.BottomStart).padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                GlassIconButton(BluebirdIcons.Back, "Back", onClick = {})
+                GlassButtonGroup {
+                    GroupedIconButton(BluebirdIcons.Filter, "Filter") {}
+                    GroupedIconButton(BluebirdIcons.More, "More") {}
+                }
+            }
+            Row(
+                Modifier.align(Alignment.CenterStart).padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                GlassTextButton("Cancel", onClick = {})
+                GlassIconButton(BluebirdIcons.Compose, "New message", onClick = {}, prominent = true)
             }
             MenuSurface(Modifier.align(Alignment.BottomEnd).padding(12.dp)) {
                 MenuItem("Reply", onClick = {}, icon = BluebirdIcons.Reply)
@@ -260,7 +283,7 @@ fun BubbleSample() {
         BubbleRow(outgoing = false) {
             Box(Modifier.padding(top = 14.dp)) {
                 MessageBubble("Usual place?", outgoing = false, position = BubblePosition.Last)
-                ReactionPill("❤️", Modifier.align(Alignment.TopEnd).offset(x = 14.dp, y = (-14).dp), mine = true)
+                TapbackBadges(listOf("❤️" to true, "😂" to false), Modifier.align(Alignment.TopEnd).offset(x = 30.dp, y = (-16).dp))
             }
         }
         Spacer(Modifier.height(Spacing.bubbleGroupBreak))

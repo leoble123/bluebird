@@ -1,6 +1,7 @@
 package com.bluebird.messaging.core.designsystem.component
 
 import com.bluebird.messaging.core.designsystem.icon.BluebirdIcons
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.border
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -50,7 +51,7 @@ import androidx.compose.ui.unit.dp
 import com.bluebird.messaging.core.designsystem.theme.AvatarSize
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
 import com.bluebird.messaging.core.designsystem.theme.Radii
-import com.bluebird.messaging.core.designsystem.theme.glass
+import com.bluebird.messaging.core.designsystem.theme.liquidGlass
 import kotlinx.coroutines.launch
 
 /** An action revealed by swiping a row. [removesItem] actions leave the row swiped away (e.g. delete). */
@@ -142,7 +143,7 @@ fun UndoBar(
             modifier = Modifier
                 .widthIn(max = 480.dp)
                 .fillMaxWidth()
-                .glass(Radii.pill)
+                .liquidGlass(RoundedCornerShape(percent = 50))
                 .padding(start = 20.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -203,44 +204,68 @@ fun PinnedTile(
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
     avatarSize: Dp = 64.dp,
+    /** iOS shows an unread pinned conversation's latest message in a small bubble above the avatar. */
+    preview: String? = null,
+    /** Space reserved above every avatar in the grid so tiles with and without a preview line up. */
+    previewSpace: Dp = 0.dp,
     avatar: @Composable () -> Unit,
 ) {
     val colors = BluebirdTheme.colors
     val ring = colors.background
     val dot = colors.unread
-    Column(
+    Box(
         modifier = modifier
             .clip(Radii.card)
-            .combinedClickable(role = Role.Button, onClick = onClick, onLongClick = onLongClick)
-            .padding(vertical = 8.dp, horizontal = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+            .combinedClickable(role = Role.Button, onClick = onClick, onLongClick = onLongClick),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        Box(Modifier.size(avatarSize)) {
-            avatar()
-            if (unread) {
-                Box(
-                    Modifier
-                        .align(Alignment.TopStart)
-                        .offset((-2).dp, (-2).dp)
-                        .size(18.dp)
-                        .clip(CircleShape)
-                        .drawBehind { drawRect(ring) }
-                        .padding(3.dp)
-                        .clip(CircleShape)
-                        .background(dot),
-                )
+        Column(
+            modifier = Modifier.padding(top = 8.dp + previewSpace, bottom = 8.dp, start = 4.dp, end = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Box(Modifier.size(avatarSize)) {
+                avatar()
+                if (unread) {
+                    Box(
+                        Modifier
+                            .align(Alignment.TopStart)
+                            .offset((-2).dp, (-2).dp)
+                            .size(18.dp)
+                            .clip(CircleShape)
+                            .drawBehind { drawRect(ring) }
+                            .padding(3.dp)
+                            .clip(CircleShape)
+                            .background(dot),
+                    )
+                }
             }
+            Text(
+                name,
+                style = BluebirdTheme.typography.caption,
+                color = if (unread) colors.textPrimary else colors.textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.width(avatarSize + 16.dp),
+            )
         }
-        Text(
-            name,
-            style = BluebirdTheme.typography.caption,
-            color = if (unread) colors.textPrimary else colors.textSecondary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.width(avatarSize + 16.dp),
-        )
+        if (preview != null) {
+            Text(
+                preview,
+                style = BluebirdTheme.typography.caption2,
+                color = colors.onBubbleIncoming,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .padding(top = 4.dp)
+                    .widthIn(max = avatarSize + 28.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(colors.bubbleIncoming)
+                    .border(1.5.dp, ring, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            )
+        }
     }
 }
 
@@ -274,7 +299,7 @@ fun NoticePill(visible: Boolean, message: String, modifier: Modifier = Modifier)
             message,
             style = BluebirdTheme.typography.callout,
             color = BluebirdTheme.colors.textPrimary,
-            modifier = Modifier.glass(Radii.pill).padding(horizontal = 18.dp, vertical = 10.dp),
+            modifier = Modifier.liquidGlass(RoundedCornerShape(percent = 50)).padding(horizontal = 18.dp, vertical = 10.dp),
         )
     }
 }

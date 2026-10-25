@@ -1,5 +1,14 @@
 package com.bluebird.messaging.core.designsystem.component
 
+import com.bluebird.messaging.core.designsystem.theme.ScrollEdge
+import com.bluebird.messaging.core.designsystem.theme.liquidGlass
+import com.bluebird.messaging.core.designsystem.theme.scrollEdgeEffect
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
@@ -48,7 +57,6 @@ import androidx.compose.ui.unit.dp
 import com.bluebird.messaging.core.designsystem.icon.BluebirdIcons
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
 import com.bluebird.messaging.core.designsystem.theme.Radii
-import com.bluebird.messaging.core.designsystem.theme.glass
 
 private val FieldMinHeight: Dp = 40.dp
 
@@ -77,98 +85,72 @@ fun BluebirdComposer(
     val typography = BluebirdTheme.typography
     val canSend by remember(state) { derivedStateOf { state.text.isNotBlank() } }
     val isEmpty by remember(state) { derivedStateOf { state.text.isEmpty() } }
-    val separator = colors.separator
-
-    Column(
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .glass()
-            .drawBehind { drawLine(separator, Offset.Zero, Offset(size.width, 0f), strokeWidth = 1f) }
+            .scrollEdgeEffect(ScrollEdge.Bottom)
             .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars)),
     ) {
-        header?.invoke()
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
             Box {
-                BluebirdIconButton(
+                GlassIconButton(
                     icon = BluebirdIcons.Plus,
                     contentDescription = "Add attachment",
                     onClick = onAttach,
-                    style = IconButtonStyle.Tonal,
                     enabled = enabled,
-                    containerSize = 34.dp,
                 )
                 attachmentMenu()
             }
-            Row(
-                modifier = Modifier
+            Spacer(Modifier.width(8.dp))
+            Column(
+                Modifier
                     .weight(1f)
-                    .padding(vertical = 4.dp)
-                    .heightIn(min = FieldMinHeight)
-                    .clip(RoundedCornerShape(Radii.lg))
-                    .background(colors.surfaceRaised.copy(alpha = if (colors.isDark) 0.55f else 0.8f))
-                    .border(1.dp, colors.outline.copy(alpha = 0.6f), RoundedCornerShape(Radii.lg))
-                    .padding(start = 14.dp, end = 4.dp),
-                verticalAlignment = Alignment.Bottom,
+                    .heightIn(min = FloatingControlSize)
+                    .liquidGlass(RoundedCornerShape(22.dp)),
             ) {
-                BasicTextField(
-                    state = state,
-                    enabled = enabled,
-                    textStyle = typography.body.copy(color = colors.textPrimary),
-                    cursorBrush = SolidColor(colors.accent),
-                    lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 1, maxHeightInLines = 6),
-                    modifier = Modifier.weight(1f).padding(vertical = 9.dp),
-                    decorator = { innerTextField ->
-                        Box {
-                            if (isEmpty) Text(placeholder, style = typography.body, color = colors.textTertiary)
-                            innerTextField()
-                        }
-                    },
-                )
-                if (onEmoji != null && isEmpty) {
-                    BluebirdIconButton(
-                        icon = BluebirdIcons.Smile,
-                        contentDescription = "Emoji",
-                        onClick = onEmoji,
-                        tint = colors.textSecondary,
-                        containerSize = 32.dp,
-                        modifier = Modifier.size(40.dp),
+                header?.invoke()
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 6.dp),
+                    verticalAlignment = Alignment.Bottom,
+                ) {
+                    BasicTextField(
+                        state = state,
+                        enabled = enabled,
+                        textStyle = typography.body.copy(color = colors.textPrimary),
+                        cursorBrush = SolidColor(colors.accent),
+                        lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 1, maxHeightInLines = 6),
+                        modifier = Modifier.weight(1f).padding(vertical = 11.dp),
+                        decorator = { innerTextField ->
+                            Box {
+                                if (isEmpty) Text(placeholder, style = typography.body, color = colors.textSecondary)
+                                innerTextField()
+                            }
+                        },
                     )
+                    if (onEmoji != null && isEmpty) {
+                        BluebirdIconButton(
+                            icon = BluebirdIcons.Smile,
+                            contentDescription = "Emoji",
+                            onClick = onEmoji,
+                            tint = colors.textSecondary,
+                            containerSize = 32.dp,
+                            modifier = Modifier.size(FloatingControlSize),
+                        )
+                    }
+                    // As in iOS, the send arrow only appears once there is something to send.
+                    AnimatedVisibility(
+                        visible = canSend,
+                        enter = scaleIn(BluebirdTheme.motion.settle(), initialScale = 0.6f) + fadeIn(BluebirdTheme.motion.fade()),
+                        exit = scaleOut(BluebirdTheme.motion.fade(), targetScale = 0.6f) + fadeOut(BluebirdTheme.motion.fade()),
+                    ) {
+                        SendButton(enabled = enabled && canSend, onClick = onSend)
+                    }
                 }
-                SendButton(enabled = enabled && canSend, onClick = onSend)
             }
         }
-    }
-}
-
-/** The quoted message shown above the composer while replying, with a button to cancel. */
-@Composable
-fun ReplyComposerHeader(author: String, text: String, onCancel: () -> Unit, modifier: Modifier = Modifier) {
-    val colors = BluebirdTheme.colors
-    Row(
-        modifier = modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.width(3.dp).height(34.dp).clip(Radii.pill).background(colors.accent))
-        Column(Modifier.weight(1f).padding(start = 10.dp)) {
-            Text("Replying to $author", style = BluebirdTheme.typography.caption, color = colors.accent, maxLines = 1)
-            Text(
-                text,
-                style = BluebirdTheme.typography.footnote,
-                color = colors.textSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        BluebirdIconButton(
-            icon = BluebirdIcons.Close,
-            contentDescription = "Cancel reply",
-            onClick = onCancel,
-            tint = colors.textSecondary,
-            containerSize = 28.dp,
-        )
     }
 }
 
@@ -257,5 +239,34 @@ fun BluebirdSearchField(
                 modifier = Modifier.size(40.dp),
             )
         }
+    }
+}
+
+/** The quoted message shown inside the composer while replying, with a button to cancel. */
+@Composable
+fun ReplyComposerHeader(author: String, text: String, onCancel: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = BluebirdTheme.colors
+    Row(
+        modifier = modifier.fillMaxWidth().padding(start = 14.dp, end = 2.dp, top = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.width(3.dp).height(32.dp).clip(Radii.pill).background(colors.accent))
+        Column(Modifier.weight(1f).padding(start = 10.dp)) {
+            Text("Replying to $author", style = BluebirdTheme.typography.caption, color = colors.accent, maxLines = 1)
+            Text(
+                text,
+                style = BluebirdTheme.typography.footnote,
+                color = colors.textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        BluebirdIconButton(
+            icon = BluebirdIcons.Close,
+            contentDescription = "Cancel reply",
+            onClick = onCancel,
+            tint = colors.textSecondary,
+            containerSize = 28.dp,
+        )
     }
 }

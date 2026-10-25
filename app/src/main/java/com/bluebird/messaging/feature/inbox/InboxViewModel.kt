@@ -50,6 +50,9 @@ data class InboxItem(
 @Immutable
 data class ContactItem(val id: String, val name: String, val detail: String, val avatar: AvatarSpec)
 
+/** The inbox filter menu, as in iOS Messages. */
+enum class InboxFilter { All, Unread }
+
 @Immutable
 data class UndoNotice(val conversationId: String, val message: String)
 
@@ -62,6 +65,7 @@ data class InboxUiState(
     val hasAnyConversations: Boolean = false,
     val isSimulated: Boolean = true,
     val undo: UndoNotice? = null,
+    val filter: InboxFilter = InboxFilter.All,
 ) {
     val isSearching: Boolean get() = query.isNotBlank()
 }
@@ -81,6 +85,7 @@ class InboxViewModel(
     private val contactQuery = MutableStateFlow("")
     private val pendingDeletes = MutableStateFlow<Set<String>>(emptySet())
     private val undo = MutableStateFlow<UndoNotice?>(null)
+    private val filter = MutableStateFlow(InboxFilter.All)
     private var deleteJob: Job? = null
 
     private data class Snapshot(val conversations: List<Conversation>, val query: String, val matches: List<MessageMatch>)
@@ -90,9 +95,10 @@ class InboxViewModel(
             Snapshot(conversations, q, if (q.isBlank()) emptyList() else provider.searchMessages(q))
         }
 
-    val uiState: StateFlow<InboxUiState> = combine(snapshots, pendingDeletes, undo, timeTicks) { snap, pending, undoNotice, now ->
-        buildState(snap, pending, undoNotice, now)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), InboxUiState())
+    val uiState: StateFlow<InboxUiState> =
+        combine(snapshots, pendingDeletes, undo, filter, timeTicks) { snap, pending, undoNotice, activeFilter, now ->
+            buildState(snap, pending, undoNotice, activeFilter, now)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), InboxUiState())
 
     val contacts: StateFlow<List<ContactItem>> = combine(provider.observeContacts(), contactQuery) { all, q ->
         all.filter { q.isBlank() || it.displayName.contains(q, true) || it.phoneOrHandle.contains(q, true) }
@@ -105,6 +111,10 @@ class InboxViewModel(
 
     fun onContactQueryChange(value: String) {
         contactQuery.value = value
+    }
+
+    fun setFilter(value: InboxFilter) {
+        filter.value = value
     }
 
     fun setPinned(id: String, pinned: Boolean) {
@@ -149,7 +159,13 @@ class InboxViewModel(
         undo.update { if (it?.conversationId == id) null else it }
     }
 
-    private fun buildState(snap: Snapshot, pending: Set<String>, undoNotice: UndoNotice?, now: Instant): InboxUiState {
+    private fun buildState(
+        snap: Snapshot,
+        pending: Set<String>,
+        undoNotice: UndoNotice?,
+        activeFilter: InboxFilter,
+        now: Instant,
+    ): InboxUiState {
         // New, empty conversations stay out of the list until a message exists (unless pinned).
         val visible = snap.conversations.filter { it.id !in pending && (it.lastMessage != null || it.isPinned) }
         val base = InboxUiState(
@@ -158,7 +174,12 @@ class InboxViewModel(
             hasAnyConversations = visible.isNotEmpty(),
             isSimulated = provider.info.isSimulated,
             undo = undoNotice,
+            filter = activeFilter,
         )
+        if (snap.query.isBlank() && activeFilter == InboxFilter.Unread) {
+            // Filtering flattens the list: unread pinned conversations appear as ordinary rows.
+            return base.copy(conversations = visible.filter { it.hasUnread }.map { it.toItem(it.lastMessage, now, highlight = null) })
+        }
         if (snap.query.isBlank()) {
             val (pinned, others) = visible.partition { it.isPinned }
             return base.copy(

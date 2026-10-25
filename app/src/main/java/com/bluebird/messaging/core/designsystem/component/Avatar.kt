@@ -25,17 +25,10 @@ import com.bluebird.messaging.core.designsystem.icon.BluebirdIcons
 import com.bluebird.messaging.core.designsystem.theme.AvatarSize
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
 
-/** Curated two-tone fills: cool, icy tones plus one warm apricot, chosen to read well with white initials. */
+/** The iOS-style monogram fill: one soft gray gradient for everyone without a photo. */
 internal object AvatarPalette {
     val tones: List<Pair<Color, Color>> = listOf(
-        Color(0xFF6F9BEF) to Color(0xFF3F6FD8), // glacier blue
-        Color(0xFF5BB5C2) to Color(0xFF2F8A9C), // meltwater teal
-        Color(0xFF8E8FE6) to Color(0xFF6466C9), // twilight periwinkle
-        Color(0xFFF2A779) to Color(0xFFE07E45), // apricot
-        Color(0xFF6CC3A0) to Color(0xFF3E9D7A), // sea glass
-        Color(0xFFCB8DB8) to Color(0xFFA9629A), // dusk rose
-        Color(0xFF8CA0B8) to Color(0xFF627790), // storm slate
-        Color(0xFF5F86D6) to Color(0xFF2E57B5), // deep cobalt
+        Color(0xFFA5ABB8) to Color(0xFF858994),
     )
 
     /** Deterministic: the same contact always gets the same tone, on every device. */

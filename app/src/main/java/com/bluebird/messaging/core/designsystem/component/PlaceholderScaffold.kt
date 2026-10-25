@@ -42,6 +42,7 @@ fun PlaceholderScaffold(
                     title = title,
                     large = large,
                     glass = true,
+                    edgeColor = containerColor,
                     navigation = onBack?.let { { BackButton(onClick = it) } },
                     actions = actions,
                 )

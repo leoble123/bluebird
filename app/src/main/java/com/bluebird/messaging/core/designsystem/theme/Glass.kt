@@ -1,5 +1,16 @@
 package com.bluebird.messaging.core.designsystem.theme
 
+import dev.chrisbanes.haze.ExperimentalHazeApi
+import dev.chrisbanes.haze.glass.GlassStyle
+import dev.chrisbanes.haze.glass.hazeGlass
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -85,4 +96,72 @@ fun Modifier.glass(
         }
     }
     return clipped.hazeBlur(input = HazeInput.Sources(state), style = style)
+}
+
+/**
+ * Liquid Glass for small floating controls (round buttons, capsules): the backdrop is refracted and lit with a
+ * specular rim, and the material responds to presses, following Apple's guidance to use it only for the
+ * controls and navigation layer. GPU shaders on Android 13+, Haze's simpler fallback below that, and a plain
+ * translucent fill outside a [GlassHost] or with [GlassSettings.blur] off.
+ */
+@OptIn(ExperimentalHazeApi::class)
+@Composable
+fun Modifier.liquidGlass(
+    shape: RoundedCornerShape = CircleShape,
+    interactionSource: InteractionSource? = null,
+    /** Tints the glass, e.g. the accent for a prominent action. */
+    tint: Color = Color.Unspecified,
+): Modifier {
+    val colors = BluebirdTheme.colors
+    val settings = BluebirdTheme.glassSettings
+    val state = LocalGlassState.current
+    if (state == null || !settings.blur) {
+        val fill = if (tint.isSpecified) tint else colors.glassFallback
+        return clip(shape).background(fill).border(Dp.Hairline, colors.separator, shape)
+    }
+    val glassTint = if (tint.isSpecified) tint.copy(alpha = 0.85f) else colors.glassTint.copy(alpha = 0.55f)
+    val style = remember(shape, glassTint, colors.background) {
+        GlassStyle.regular.then {
+            shape(shape)
+            backgroundColor(colors.background)
+            tint(glassTint)
+        }
+    }
+    return hazeGlass(input = HazeInput.Sources(state), style = style, interactionSource = interactionSource)
+}
+
+enum class ScrollEdge { Top, Bottom }
+
+/**
+ * iOS's scroll edge effect: content passing under floating controls at the top or bottom of the screen is
+ * softly blurred and faded toward the edge, instead of meeting a solid bar.
+ */
+@Composable
+fun Modifier.scrollEdgeEffect(
+    edge: ScrollEdge,
+    /** The screen's background color, which the blurred edge fades into. */
+    color: Color = BluebirdTheme.colors.background,
+): Modifier {
+    val settings = BluebirdTheme.glassSettings
+    val state = LocalGlassState.current
+    val solid = color
+    val fade = remember(edge, solid) {
+        val stops = listOf(solid.copy(alpha = 0.94f), solid.copy(alpha = 0.7f), solid.copy(alpha = 0f))
+        Brush.verticalGradient(if (edge == ScrollEdge.Top) stops else stops.reversed())
+    }
+    if (state == null || !settings.blur) return background(fade)
+    val style = remember(edge, solid) {
+        // Fully applied across the controls, fading only in the last quarter toward the content.
+        val maskStops = arrayOf(0f to Color.Black, 0.75f to Color.Black, 1f to Color.Transparent)
+        val reversedStops = arrayOf(0f to Color.Transparent, 0.25f to Color.Black, 1f to Color.Black)
+        HazeBlurStyle {
+            blurRadius(18.dp)
+            noiseFactor(0f)
+            backgroundColor(solid)
+            colorEffects(listOf(HazeColorEffect.tint(solid.copy(alpha = 0.72f))))
+            mask(Brush.verticalGradient(*if (edge == ScrollEdge.Top) maskStops else reversedStops))
+            fallbackColorEffect(HazeColorEffect.tint(solid.copy(alpha = 0.9f)))
+        }
+    }
+    return hazeBlur(input = HazeInput.Sources(state), style = style)
 }

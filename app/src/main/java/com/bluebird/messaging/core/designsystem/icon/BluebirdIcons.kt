@@ -16,6 +16,9 @@ object BluebirdIcons {
     val Back by lazy { icon("Back") { line(2.2f) { moveTo(15f, 5f); lineTo(8f, 12f); lineTo(15f, 19f) } } }
     val ChevronRight by lazy { icon("ChevronRight") { line(2f) { moveTo(9.5f, 6f); lineTo(15.5f, 12f); lineTo(9.5f, 18f) } } }
     val ChevronDown by lazy { icon("ChevronDown") { line(2.2f) { moveTo(6f, 9.5f); lineTo(12f, 15.5f); lineTo(18f, 9.5f) } } }
+    /** Three lines of decreasing length, the iOS filter glyph. */
+    val Filter by lazy { icon("Filter") { line(2f) { moveTo(4.5f, 7f); horizontalLineTo(19.5f); moveTo(7.5f, 12f); horizontalLineTo(16.5f); moveTo(10.5f, 17f); horizontalLineTo(13.5f) } } }
+    val More by lazy { icon("More") { solid { circle(5.5f, 12f, 1.6f) }; solid { circle(12f, 12f, 1.6f) }; solid { circle(18.5f, 12f, 1.6f) } } }
     val Send by lazy {
         icon("Send") {
             line(2.3f) {

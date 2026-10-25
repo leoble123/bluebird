@@ -1,5 +1,19 @@
 package com.bluebird.messaging.feature.inbox
 
+import com.bluebird.messaging.core.designsystem.component.GlassButtonGroup
+import com.bluebird.messaging.core.designsystem.component.GlassIconButton
+import com.bluebird.messaging.core.designsystem.component.GlassSearchBar
+import com.bluebird.messaging.core.designsystem.component.GroupedIconButton
+import com.bluebird.messaging.core.designsystem.component.rememberAnchoredMenuPosition
+import com.bluebird.messaging.core.designsystem.theme.ScrollEdge
+import com.bluebird.messaging.core.designsystem.theme.scrollEdgeEffect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.height
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,10 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bluebird.messaging.core.designsystem.component.Avatar
 import com.bluebird.messaging.core.designsystem.component.BluebirdDivider
-import com.bluebird.messaging.core.designsystem.component.BluebirdIconButton
 import com.bluebird.messaging.core.designsystem.component.BluebirdMenu
-import com.bluebird.messaging.core.designsystem.component.BluebirdSearchField
-import com.bluebird.messaging.core.designsystem.component.BluebirdTopBar
 import com.bluebird.messaging.core.designsystem.component.ConversationRow
 import com.bluebird.messaging.core.designsystem.component.ConversationRowDividerInset
 import com.bluebird.messaging.core.designsystem.component.EmptyState
@@ -67,7 +78,8 @@ import com.bluebird.messaging.core.designsystem.theme.GlassHost
 import com.bluebird.messaging.core.designsystem.theme.WindowClass
 import com.bluebird.messaging.core.designsystem.theme.glassSource
 
-private val TopBarHeight = 52.dp
+private val TopBarHeight = 56.dp
+private val BottomBarHeight = 60.dp
 
 /** Callbacks for everything a user can do to one conversation from the inbox. */
 private class ConversationActions(
@@ -112,6 +124,7 @@ fun InboxScreen(
         onOpenContacts = onOpenContacts,
         onOpenSettings = onOpenSettings,
         onUndo = viewModel::undoDelete,
+        onFilter = viewModel::setFilter,
     )
 
     if (composing) {
@@ -135,6 +148,7 @@ private fun InboxContent(
     onOpenContacts: () -> Unit,
     onOpenSettings: () -> Unit,
     onUndo: () -> Unit,
+    onFilter: (InboxFilter) -> Unit,
 ) {
     val colors = BluebirdTheme.colors
     val listState = rememberLazyListState()
@@ -151,29 +165,25 @@ private fun InboxContent(
     val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     var menuFor by remember { mutableStateOf<String?>(null) }
+    var filterMenu by remember { mutableStateOf(false) }
+    var moreMenu by remember { mutableStateOf(false) }
+    val unreadOnly = state.filter == InboxFilter.Unread
 
     GlassHost {
         Box(Modifier.fillMaxSize().background(colors.background)) {
+            // Content runs edge to edge; controls float above it (iOS 26 / Liquid Glass layering).
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize().glassSource(),
-                contentPadding = PaddingValues(top = topInset + TopBarHeight, bottom = bottomInset + 96.dp),
+                contentPadding = PaddingValues(top = topInset + TopBarHeight, bottom = bottomInset + BottomBarHeight + 16.dp),
             ) {
                 item(key = "title", contentType = "title") {
-                    LargeTitle("Messages") {
+                    LargeTitle(if (unreadOnly) "Unread" else "Messages") {
                         if (state.isSimulated) {
                             Spacer(Modifier.width(10.dp))
                             StatusPill("Simulated")
                         }
                     }
-                }
-                item(key = "search", contentType = "search") {
-                    BluebirdSearchField(
-                        state = searchState,
-                        placeholder = "Search",
-                        onSearch = { focusManager.clearFocus() },
-                        modifier = Modifier.padding(horizontal = BluebirdTheme.layout.gutter).padding(bottom = 8.dp),
-                    )
                 }
                 when {
                     state.isLoading -> item(key = "loading") { LoadingState() }
@@ -188,6 +198,16 @@ private fun InboxContent(
                             modifier = Modifier.fillParentMaxHeight(0.65f),
                         )
                     }
+                    unreadOnly && state.conversations.isEmpty() -> item(key = "no-unread") {
+                        EmptyState(
+                            icon = BluebirdIcons.Check,
+                            title = "No unread messages",
+                            message = "You're all caught up.",
+                            actionLabel = "Show all messages",
+                            onAction = { onFilter(InboxFilter.All) },
+                            modifier = Modifier.fillParentMaxHeight(0.65f),
+                        )
+                    }
                     else -> {
                         if (state.pinned.isNotEmpty()) {
                             item(key = "pinned", contentType = "pinned") {
@@ -199,27 +219,82 @@ private fun InboxContent(
                 }
             }
 
-            BluebirdTopBar(
-                title = "Messages",
-                glass = collapsed,
-                titleVisible = collapsed,
-                navigation = {
-                    BluebirdIconButton(BluebirdIcons.Settings, "Settings", onClick = onOpenSettings)
-                },
-                actions = {
-                    BluebirdIconButton(BluebirdIcons.People, "Contacts", onClick = onOpenContacts)
-                    BluebirdIconButton(BluebirdIcons.Compose, "New message", onClick = onCompose)
-                },
-            )
+            // Top: compact title once the large one scrolls away, and the Filter / More actions in one capsule.
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .scrollEdgeEffect(ScrollEdge.Top)
+                    .padding(top = topInset)
+                    .height(TopBarHeight)
+                    .padding(horizontal = 16.dp),
+            ) {
+                val titleAlpha by animateFloatAsState(if (collapsed) 1f else 0f, BluebirdTheme.motion.fade(), label = "inboxTitle")
+                Text(
+                    if (unreadOnly) "Unread" else "Messages",
+                    style = BluebirdTheme.typography.headline,
+                    color = colors.textPrimary,
+                    modifier = Modifier.align(Alignment.Center).graphicsLayer { alpha = titleAlpha },
+                )
+                GlassButtonGroup(Modifier.align(Alignment.CenterEnd)) {
+                    Box {
+                        GroupedIconButton(BluebirdIcons.Filter, "Filter conversations") { filterMenu = true }
+                        BluebirdMenu(
+                            expanded = filterMenu,
+                            onDismissRequest = { filterMenu = false },
+                            positionProvider = rememberAnchoredMenuPosition(alignEnd = true),
+                        ) {
+                            MenuItem(
+                                "All Messages",
+                                icon = if (!unreadOnly) BluebirdIcons.Check else null,
+                                onClick = { filterMenu = false; onFilter(InboxFilter.All) },
+                            )
+                            MenuItem(
+                                "Unread",
+                                icon = if (unreadOnly) BluebirdIcons.Check else null,
+                                onClick = { filterMenu = false; onFilter(InboxFilter.Unread) },
+                            )
+                        }
+                    }
+                    Box {
+                        GroupedIconButton(BluebirdIcons.More, "More") { moreMenu = true }
+                        BluebirdMenu(
+                            expanded = moreMenu,
+                            onDismissRequest = { moreMenu = false },
+                            positionProvider = rememberAnchoredMenuPosition(alignEnd = true),
+                        ) {
+                            MenuItem("Contacts", icon = BluebirdIcons.People, onClick = { moreMenu = false; onOpenContacts() })
+                            MenuItem("Settings", icon = BluebirdIcons.Settings, onClick = { moreMenu = false; onOpenSettings() })
+                        }
+                    }
+                }
+            }
 
-            UndoBar(
-                visible = state.undo != null,
-                message = state.undo?.message.orEmpty(),
-                onUndo = onUndo,
-                modifier = Modifier
+            // Bottom: search docked within thumb reach, with Compose detached beside it, as in iOS 26 Messages.
+            Column(
+                Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(start = 16.dp, end = 16.dp, bottom = bottomInset + 12.dp),
-            )
+                    .fillMaxWidth()
+                    .scrollEdgeEffect(ScrollEdge.Bottom)
+                    .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                UndoBar(
+                    visible = state.undo != null,
+                    message = state.undo?.message.orEmpty(),
+                    onUndo = onUndo,
+                    modifier = Modifier.padding(bottom = 10.dp),
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    GlassSearchBar(
+                        state = searchState,
+                        onSearch = { focusManager.clearFocus() },
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    GlassIconButton(BluebirdIcons.Compose, "New message", onClick = onCompose)
+                }
+            }
         }
     }
 }
@@ -325,6 +400,8 @@ private fun PinnedGrid(
         WindowClass.Expanded -> 6
     }
     val avatarSize: Dp = if (BluebirdTheme.layout.windowClass == WindowClass.Compact) 68.dp else 72.dp
+    // Unread pins show their latest message above the avatar; every tile reserves the space so rows line up.
+    val previewSpace = if (pinned.any { it.unread }) 30.dp else 0.dp
     Box(Modifier.padding(horizontal = BluebirdTheme.layout.gutter - 4.dp, vertical = 4.dp)) {
         Column {
             pinned.chunked(columns).forEach { rowItems ->
@@ -335,6 +412,8 @@ private fun PinnedGrid(
                                 name = item.title,
                                 unread = item.unread,
                                 avatarSize = avatarSize,
+                                preview = if (item.unread) item.preview else null,
+                                previewSpace = previewSpace,
                                 onClick = { actions.open(item.id) },
                                 onLongClick = {
                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)

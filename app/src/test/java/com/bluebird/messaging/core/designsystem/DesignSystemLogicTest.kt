@@ -1,14 +1,12 @@
 package com.bluebird.messaging.core.designsystem
 
 import com.bluebird.messaging.core.designsystem.component.AvatarPalette
-import com.bluebird.messaging.core.designsystem.component.BubbleCorners
 import com.bluebird.messaging.core.designsystem.component.BubblePosition
-import com.bluebird.messaging.core.designsystem.component.bubbleCorners
+import com.bluebird.messaging.core.designsystem.component.bubbleHasTail
 import com.bluebird.messaging.core.designsystem.component.deliveryLabel
 import com.bluebird.messaging.core.designsystem.component.initialsFor
 import com.bluebird.messaging.core.designsystem.component.isJumboEmoji
 import com.bluebird.messaging.core.designsystem.theme.BluebirdLayout
-import com.bluebird.messaging.core.designsystem.theme.Radii
 import com.bluebird.messaging.core.designsystem.theme.WindowClass
 import com.bluebird.messaging.core.model.DeliveryState
 import com.bluebird.messaging.core.ui.formatConversationTimestamp
@@ -23,27 +21,11 @@ import java.util.Locale
 class DesignSystemLogicTest {
 
     @Test
-    fun singleOutgoingBubbleHasFacetOnlyAtOuterBottom() {
-        val c = bubbleCorners(outgoing = true, position = BubblePosition.Single)
-        assertEquals(BubbleCorners(Radii.bubble, Radii.bubble, Radii.bubbleFacet, Radii.bubble), c)
-    }
-
-    @Test
-    fun groupedIncomingBubblesTightenTheirSharedEdge() {
-        val first = bubbleCorners(outgoing = false, position = BubblePosition.First)
-        val middle = bubbleCorners(outgoing = false, position = BubblePosition.Middle)
-        val last = bubbleCorners(outgoing = false, position = BubblePosition.Last)
-        assertEquals(Radii.bubble, first.topStart)
-        assertEquals(Radii.bubbleJoined, first.bottomStart)
-        assertEquals(Radii.bubbleJoined, middle.topStart)
-        assertEquals(Radii.bubbleJoined, middle.bottomStart)
-        assertEquals(Radii.bubbleJoined, last.topStart)
-        assertEquals(Radii.bubbleFacet, last.bottomStart)
-        // The far side stays fully round.
-        listOf(first, middle, last).forEach {
-            assertEquals(Radii.bubble, it.topEnd)
-            assertEquals(Radii.bubble, it.bottomEnd)
-        }
+    fun onlyTheLastBubbleOfARunHasATail() {
+        assertTrue(bubbleHasTail(BubblePosition.Single))
+        assertTrue(bubbleHasTail(BubblePosition.Last))
+        assertFalse(bubbleHasTail(BubblePosition.First))
+        assertFalse(bubbleHasTail(BubblePosition.Middle))
     }
 
     @Test
