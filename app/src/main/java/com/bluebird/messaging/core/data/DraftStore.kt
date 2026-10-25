@@ -1,22 +1,29 @@
 package com.bluebird.messaging.core.data
 
-import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 
 /** Unsent composer text, per conversation, so leaving a conversation never loses what was typed. */
 interface DraftStore {
-    fun get(conversationId: String): String
+    suspend fun get(conversationId: String): String
 
     /** A blank [text] clears the draft. */
-    fun set(conversationId: String, text: String)
+    suspend fun set(conversationId: String, text: String)
+
+    /** Every non-empty draft, keyed by conversation id. */
+    fun observeAll(): Flow<Map<String, String>>
 }
 
-/** Keeps drafts for the life of the process. Local persistence replaces this in a later phase. */
+/** Keeps drafts for the life of the process only. Used in tests; the app uses [RoomDraftStore]. */
 class InMemoryDraftStore : DraftStore {
-    private val drafts = ConcurrentHashMap<String, String>()
+    private val drafts = MutableStateFlow<Map<String, String>>(emptyMap())
 
-    override fun get(conversationId: String): String = drafts[conversationId].orEmpty()
+    override suspend fun get(conversationId: String): String = drafts.value[conversationId].orEmpty()
 
-    override fun set(conversationId: String, text: String) {
-        if (text.isBlank()) drafts.remove(conversationId) else drafts[conversationId] = text
+    override suspend fun set(conversationId: String, text: String) {
+        drafts.update { if (text.isBlank()) it - conversationId else it + (conversationId to text) }
     }
+
+    override fun observeAll(): Flow<Map<String, String>> = drafts
 }

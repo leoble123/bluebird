@@ -1,5 +1,7 @@
 package com.bluebird.messaging.core.provider
 
+import com.bluebird.messaging.core.data.LocalMessageStore
+import com.bluebird.messaging.core.data.PreferencesRepository
 import com.bluebird.messaging.core.model.Contact
 import com.bluebird.messaging.core.model.Conversation
 import com.bluebird.messaging.core.model.DeliveryState
@@ -10,70 +12,78 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Fully offline, in-memory provider with realistic sample conversations.
- * Nothing here touches a network; [info] reports it as simulated.
+ * Fully offline provider with realistic sample conversations. Nothing here touches a network; [info] reports it
+ * as simulated. Everything is stored in [store] (the local database), so it survives restarts; only "typing"
+ * indicators are in memory, since they are momentary by nature.
  *
- * When [replyScope] is given, sent messages progress Sent → Delivered → Read, then the other person "types"
- * and sends a canned reply, so previews and unread indicators can be seen updating live.
+ * Sample data is added once, on first launch. When [replyScope] is given, sent messages progress
+ * Sent → Delivered → Read, then the other person "types" and sends a canned reply.
  */
 class MockMessagingProvider(
+    private val store: LocalMessageStore,
+    private val preferences: PreferencesRepository,
     private val clock: Clock = Clock.systemDefaultZone(),
     private val replyScope: CoroutineScope? = null,
-    seedSampleData: Boolean = true,
+    private val seedSampleData: Boolean = true,
+    private val newId: (prefix: String) -> String = { prefix -> "$prefix-${UUID.randomUUID()}" },
 ) : MessagingProvider {
 
     override val info = ProviderInfo(displayName = "Mock (simulated)", isSimulated = true)
 
-    private val nextId = AtomicLong(1000)
     private val replyCounter = AtomicLong(0)
-    private val contacts = MutableStateFlow(SampleData.contacts)
-    private val messages = MutableStateFlow(if (seedSampleData) SampleData.messages(clock.instant()) else emptyList())
-    private val conversationMeta = MutableStateFlow(if (seedSampleData) SampleData.conversationMeta else emptyList())
     private val typing = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
+    private val seedLock = Mutex()
+    @Volatile private var seeded = false
 
-    override fun observeContacts(): Flow<List<Contact>> =
-        contacts.map { list -> list.sortedBy { it.displayName.lowercase() } }
-
-    override fun observeMessages(conversationId: String): Flow<List<Message>> =
-        messages.map { all -> all.filter { it.conversationId == conversationId }.sortedBy { it.sentAt } }
+    /** Adds the sample contacts (and, unless disabled, sample conversations) the first time the app runs. */
+    suspend fun ensureSeeded() {
+        if (seeded) return
+        seedLock.withLock {
+            if (seeded) return
+            if (!preferences.isSampleDataSeeded()) {
+                store.upsertContacts(SampleData.contacts)
+                if (seedSampleData && store.isEmpty()) {
+                    val now = clock.instant()
+                    SampleData.conversations.forEach { (id, contactIds, pinnedOrder) ->
+                        store.createConversation(id, contactIds, now.minus(Duration.ofDays(30)), pinnedOrder)
+                    }
+                    store.upsertMessages(SampleData.longThread(now) + SampleData.messages(now))
+                }
+                preferences.markSampleDataSeeded()
+            }
+            seeded = true
+        }
+    }
 
     override fun observeConversations(): Flow<List<Conversation>> =
-        combine(conversationMeta, messages, contacts) { meta, allMessages, allContacts ->
-            val byId = allContacts.associateBy { it.id }
-            val threads = allMessages.groupBy { it.conversationId }
-            meta.map { m ->
-                val thread = threads[m.id].orEmpty()
-                Conversation(
-                    id = m.id,
-                    participants = m.participantIds.mapNotNull(byId::get),
-                    lastMessage = thread.maxByOrNull { it.sentAt },
-                    unreadCount = thread.count { !it.isOutgoing && it.deliveryState != DeliveryState.Read },
-                    isPinned = m.pinnedOrder != null,
-                    isMarkedUnread = m.markedUnread,
-                ) to m.pinnedOrder
-            }.sortedWith(
-                compareBy<Pair<Conversation, Long?>> { it.second == null }
-                    .thenBy { it.second ?: 0L }
-                    .thenByDescending { it.first.lastMessage?.sentAt ?: Instant.MIN }
-                    .thenBy { it.first.id },
-            ).map { it.first }
-        }
+        store.observeConversations().onStart { ensureSeeded() }
+
+    override fun observeMessages(conversationId: String): Flow<List<Message>> =
+        store.observeMessages(conversationId).onStart { ensureSeeded() }
+
+    override fun observeContacts(): Flow<List<Contact>> =
+        store.observeContacts().onStart { ensureSeeded() }
 
     override fun observeTyping(conversationId: String): Flow<Set<String>> =
         typing.map { it[conversationId].orEmpty() }
 
     override suspend fun sendMessage(conversationId: String, text: String, replyToId: String?): Message {
         require(text.isNotBlank()) { "Cannot send an empty message" }
+        ensureSeeded()
+        require(store.conversationExists(conversationId)) { "Conversation $conversationId no longer exists" }
         val message = Message(
             id = newId("m"),
             conversationId = conversationId,
@@ -83,107 +93,87 @@ class MockMessagingProvider(
             deliveryState = DeliveryState.Sent,
             replyToId = replyToId,
         )
-        messages.update { it + message }
+        store.upsertMessages(listOf(message))
         replyScope?.launch { simulateDeliveryAndReply(message) }
         return message
     }
 
+    // Every change waits for first-launch seeding, so it can never run against a half-filled database and then be
+    // undone by sample data arriving afterwards.
+
     override suspend fun setReaction(messageId: String, emoji: String?) {
-        messages.update { all ->
-            all.map { m ->
-                if (m.id != messageId) return@map m
-                val mine = m.reactions.firstOrNull { it.senderId == null }
-                val others = m.reactions.filterNot { it.senderId == null }
-                val next = if (emoji == null || mine?.emoji == emoji) others else others + Reaction(null, emoji)
-                m.copy(reactions = next)
-            }
-        }
+        ensureSeeded()
+        store.setReaction(messageId, senderId = null, emoji = emoji, at = clock.instant())
     }
 
     override suspend fun deleteMessages(messageIds: Set<String>) {
-        messages.update { all -> all.filterNot { it.id in messageIds } }
+        ensureSeeded()
+        store.deleteMessages(messageIds)
     }
 
     override suspend fun setPinned(conversationId: String, pinned: Boolean) {
-        conversationMeta.update { all ->
-            val nextOrder = (all.mapNotNull { it.pinnedOrder }.maxOrNull() ?: 0L) + 1
-            all.map {
-                when {
-                    it.id != conversationId -> it
-                    pinned && it.pinnedOrder == null -> it.copy(pinnedOrder = nextOrder)
-                    !pinned -> it.copy(pinnedOrder = null)
-                    else -> it
-                }
-            }
-        }
+        ensureSeeded()
+        store.setPinned(conversationId, pinned)
     }
 
     override suspend fun markRead(conversationId: String) {
-        conversationMeta.update { all -> all.map { if (it.id == conversationId) it.copy(markedUnread = false) else it } }
-        messages.update { all ->
-            all.map {
-                if (it.conversationId == conversationId && !it.isOutgoing && it.deliveryState != DeliveryState.Read) {
-                    it.copy(deliveryState = DeliveryState.Read)
-                } else {
-                    it
-                }
-            }
-        }
+        ensureSeeded()
+        store.markRead(conversationId)
     }
 
     override suspend fun markUnread(conversationId: String) {
-        conversationMeta.update { all -> all.map { if (it.id == conversationId) it.copy(markedUnread = true) else it } }
+        ensureSeeded()
+        store.markUnread(conversationId)
     }
 
     override suspend fun deleteConversation(conversationId: String) {
-        conversationMeta.update { all -> all.filterNot { it.id == conversationId } }
-        messages.update { all -> all.filterNot { it.conversationId == conversationId } }
+        ensureSeeded()
+        store.deleteConversation(conversationId)
     }
 
     override suspend fun startConversation(contactIds: List<String>): String {
         require(contactIds.isNotEmpty()) { "A conversation needs at least one participant" }
-        val wanted = contactIds.toSet()
-        conversationMeta.value.firstOrNull { it.participantIds.toSet() == wanted }?.let { return it.id }
+        ensureSeeded()
+        store.findConversation(contactIds.toSet())?.let { return it }
         val id = newId("t")
-        conversationMeta.update { it + ConversationMeta(id, contactIds.distinct(), pinnedOrder = null) }
+        store.createConversation(id, contactIds, clock.instant())
         return id
     }
 
     override suspend fun searchMessages(query: String, limit: Int): List<MessageMatch> {
-        val q = query.trim()
-        if (q.isEmpty()) return emptyList()
-        val live = conversationMeta.value.map { it.id }.toSet()
-        return messages.value
-            .filter { it.conversationId in live && it.text.contains(q, ignoreCase = true) }
-            .sortedByDescending { it.sentAt }
-            .take(limit)
-            .map { MessageMatch(it.conversationId, it) }
+        ensureSeeded()
+        return store.searchMessages(query, limit)
     }
 
     private suspend fun simulateDeliveryAndReply(sent: Message) {
         delay(800)
-        setDeliveryState(sent.id, DeliveryState.Delivered)
+        store.setDeliveryState(sent.id, DeliveryState.Delivered)
         delay(1000)
-        setDeliveryState(sent.id, DeliveryState.Read)
+        store.setDeliveryState(sent.id, DeliveryState.Read)
         delay(400)
-        val meta = conversationMeta.value.firstOrNull { it.id == sent.conversationId } ?: return
+        val participants = store.participantIds(sent.conversationId)
+        if (participants.isEmpty()) return
         val n = replyCounter.getAndIncrement().toInt()
-        val sender = meta.participantIds[n % meta.participantIds.size]
+        val sender = participants[n % participants.size]
         setTyping(sent.conversationId, sender, true)
         try {
             delay(1600)
         } finally {
             setTyping(sent.conversationId, sender, false)
         }
-        val reply = Message(
-            id = newId("m"),
-            conversationId = sent.conversationId,
-            senderId = sender,
-            text = SampleData.replies[n % SampleData.replies.size],
-            sentAt = clock.instant(),
-            deliveryState = DeliveryState.Delivered,
+        if (!store.conversationExists(sent.conversationId)) return
+        store.upsertMessages(
+            listOf(
+                Message(
+                    id = newId("m"),
+                    conversationId = sent.conversationId,
+                    senderId = sender,
+                    text = SampleData.replies[n % SampleData.replies.size],
+                    sentAt = clock.instant(),
+                    deliveryState = DeliveryState.Delivered,
+                ),
+            ),
         )
-        messages.update { it + reply }
     }
 
     private fun setTyping(conversationId: String, contactId: String, isTyping: Boolean) {
@@ -193,21 +183,7 @@ class MockMessagingProvider(
         }
     }
 
-    private fun setDeliveryState(messageId: String, state: DeliveryState) {
-        messages.update { all -> all.map { if (it.id == messageId) it.copy(deliveryState = state) else it } }
-    }
-
-    private fun newId(prefix: String) = "$prefix${nextId.incrementAndGet()}"
-
-    internal data class ConversationMeta(
-        val id: String,
-        val participantIds: List<String>,
-        /** Non-null when pinned; lower values were pinned earlier and show first. */
-        val pinnedOrder: Long?,
-        val markedUnread: Boolean = false,
-    )
-
-    private object SampleData {
+    internal object SampleData {
         val contacts = listOf(
             Contact("c1", "Maya Chen", "+1 555 0101"),
             Contact("c2", "Jordan Ellis", "+1 555 0102"),
@@ -222,16 +198,17 @@ class MockMessagingProvider(
             Contact("c11", "Isabel Moreno", "+1 555 0111"),
         )
 
-        val conversationMeta = listOf(
-            ConversationMeta("t1", listOf("c1"), pinnedOrder = 1),
-            ConversationMeta("t2", listOf("c2"), pinnedOrder = null),
-            ConversationMeta("t3", listOf("c3"), pinnedOrder = null),
-            ConversationMeta("t4", listOf("c4", "c5"), pinnedOrder = null),
-            ConversationMeta("t5", listOf("c6"), pinnedOrder = 2),
-            ConversationMeta("t6", listOf("c9"), pinnedOrder = 3),
-            ConversationMeta("t7", listOf("c7"), pinnedOrder = null),
-            ConversationMeta("t8", listOf("c8"), pinnedOrder = null),
-            ConversationMeta("t9", listOf("c10", "c11", "c2"), pinnedOrder = null),
+        /** Conversation id, participant ids, pin order (null when not pinned). */
+        val conversations: List<Triple<String, List<String>, Long?>> = listOf(
+            Triple("t1", listOf("c1"), 1L),
+            Triple("t2", listOf("c2"), null),
+            Triple("t3", listOf("c3"), null),
+            Triple("t4", listOf("c4", "c5"), null),
+            Triple("t5", listOf("c6"), 2L),
+            Triple("t6", listOf("c9"), 3L),
+            Triple("t7", listOf("c7"), null),
+            Triple("t8", listOf("c8"), null),
+            Triple("t9", listOf("c10", "c11", "c2"), null),
         )
 
         val replies = listOf(
@@ -253,8 +230,7 @@ class MockMessagingProvider(
 
         /** An older back-and-forth with Jordan (t2), long enough to exercise scrolling and grouping. */
         fun longThread(now: Instant): List<Message> {
-            val start = now.minus(Duration.ofDays(21))
-            var t = start
+            var t = now.minus(Duration.ofDays(21))
             return (1..160).map { i ->
                 // Bursts of quick messages separated by longer gaps, so separators and grouping both appear.
                 t = t.plus(Duration.ofMinutes(if (i % 9 == 0) 60L * 24 else if (i % 4 == 0) 95L else 2L))
@@ -277,7 +253,7 @@ class MockMessagingProvider(
             fun outgoing(id: String, t: String, text: String, min: Long, state: DeliveryState = DeliveryState.Read) =
                 Message(id, t, null, text, ago(min), state)
 
-            return longThread(now) + listOf(
+            return listOf(
                 incoming("m1", "t1", "c1", "Are we still on for dinner tonight?", 95),
                 outgoing("m2", "t1", "Yes! 7:30 at the usual place?", 92).copy(reactions = listOf(Reaction("c1", "❤️"))),
                 incoming("m3", "t1", "c1", "Perfect. I'll grab a table 🙌", 4, read = false).copy(replyToId = "m2"),

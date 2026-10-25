@@ -1,7 +1,9 @@
 package com.bluebird.messaging.feature.conversation
 
 import com.bluebird.messaging.core.data.InMemoryDraftStore
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.bluebird.messaging.core.provider.MockMessagingProvider
+import com.bluebird.messaging.testing.TestData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -20,30 +22,46 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(AndroidJUnit4::class)
 class ConversationViewModelTest {
 
     private val now = Instant.parse("2026-10-24T12:00:00Z")
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
     private val drafts = InMemoryDraftStore()
-    private lateinit var provider: MockMessagingProvider
+    private lateinit var data: TestData
+    private val provider: MockMessagingProvider get() = data.provider
 
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        provider = MockMessagingProvider(clock)
     }
 
     @After
     fun tearDown() {
+        if (::data.isInitialized) data.close()
         Dispatchers.resetMain()
     }
 
-    private fun TestScope.newViewModel(id: String = "t1"): ConversationViewModel {
+    /** Lets pending database work and Flow updates finish (without advancing time), then reads the state. */
+    private fun TestScope.settled(vm: ConversationViewModel): ConversationUiState {
+        testScheduler.runCurrent()
+        return vm.uiState.value
+    }
+
+    /** Creates the database and provider on first use. */
+    private fun TestScope.useData(replies: Boolean = false): TestData {
+        if (!::data.isInitialized) data = TestData(this, clock, replyScope = if (replies) backgroundScope else null)
+        return data
+    }
+
+    private fun TestScope.newViewModel(id: String = "t1", replies: Boolean = false): ConversationViewModel {
+        useData(replies)
         val vm = ConversationViewModel(id, provider, drafts, clock, ZoneOffset.UTC, backgroundScope, flowOf(now))
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
         return vm
@@ -53,7 +71,7 @@ class ConversationViewModelTest {
 
     @Test
     fun loadsTheConversation() = runTest {
-        val state = newViewModel().uiState.value
+        val state = settled(newViewModel())
         assertFalse(state.isLoading)
         assertEquals("Maya Chen", state.title)
         assertEquals("+1 555 0101", state.subtitle)
@@ -66,7 +84,7 @@ class ConversationViewModelTest {
 
     @Test
     fun unknownConversationIsNotFound() = runTest {
-        val state = newViewModel("nope").uiState.value
+        val state = settled(newViewModel("nope"))
         assertTrue(state.notFound)
     }
 
@@ -74,35 +92,40 @@ class ConversationViewModelTest {
     fun sendingAddsTheMessageAndClearsReplyAndDraft() = runTest {
         drafts.set("t1", "half-typed")
         val vm = newViewModel()
-        assertEquals("half-typed", vm.initialDraft)
+        assertEquals("half-typed", vm.loadDraft())
 
         vm.startReply("m3")
-        assertEquals(ReplyUi("m3", "Maya", "Perfect. I'll grab a table 🙌"), vm.uiState.value.replyingTo)
+        assertEquals(ReplyUi("m3", "Maya", "Perfect. I'll grab a table 🙌"), settled(vm).replyingTo)
 
         assertTrue(vm.send("  See you there  "))
-        val newest = vm.uiState.value.messages().first()
+        val newest = settled(vm).messages().first()
         assertEquals("See you there", newest.text)
         assertTrue(newest.outgoing)
         assertEquals("Maya", newest.reply?.author)
         assertEquals("Sent", newest.status)
-        assertNull(vm.uiState.value.replyingTo)
+        assertNull(settled(vm).replyingTo)
         assertEquals("", drafts.get("t1"))
     }
 
     @Test
     fun blankMessagesAreNotSent() = runTest {
         val vm = newViewModel()
-        val before = vm.uiState.value.messages().size
+        val before = settled(vm).messages().size
         assertFalse(vm.send("   "))
-        assertEquals(before, vm.uiState.value.messages().size)
+        assertEquals(before, settled(vm).messages().size)
     }
 
     @Test
     fun draftsAreSavedAsYouType() = runTest {
         val vm = newViewModel()
         vm.onDraftChanged("Running late")
+        assertEquals("", drafts.get("t1")) // not yet: saving waits for a pause in typing
+        testScheduler.advanceTimeBy(ConversationViewModel.DRAFT_SAVE_DELAY_MS + 1)
+        testScheduler.runCurrent()
         assertEquals("Running late", drafts.get("t1"))
         vm.onDraftChanged("")
+        testScheduler.advanceTimeBy(ConversationViewModel.DRAFT_SAVE_DELAY_MS + 1)
+        testScheduler.runCurrent()
         assertEquals("", drafts.get("t1"))
     }
 
@@ -110,39 +133,40 @@ class ConversationViewModelTest {
     fun reactingTogglesYourReaction() = runTest {
         val vm = newViewModel()
         vm.react("m3", "😂")
-        assertTrue(vm.uiState.value.messages().first { it.id == "m3" }.reactions.single { it.emoji == "😂" }.mine)
+        assertTrue(settled(vm).messages().first { it.id == "m3" }.reactions.single { it.emoji == "😂" }.mine)
         vm.react("m3", "😂")
-        assertTrue(vm.uiState.value.messages().first { it.id == "m3" }.reactions.isEmpty())
+        assertTrue(settled(vm).messages().first { it.id == "m3" }.reactions.isEmpty())
     }
 
     @Test
     fun deletingHidesNowAndCommitsAfterTheUndoWindow() = runTest {
         val vm = newViewModel()
         vm.deleteMessages(setOf("m1"))
-        assertTrue(vm.uiState.value.messages().none { it.id == "m1" })
-        assertEquals("Message deleted", vm.uiState.value.undo?.message)
+        assertTrue(settled(vm).messages().none { it.id == "m1" })
+        assertEquals("Message deleted", settled(vm).undo?.message)
 
         testScheduler.advanceTimeBy(ConversationViewModel.UNDO_WINDOW_MS + 1)
         testScheduler.runCurrent()
         assertTrue(provider.observeMessages("t1").first().none { it.id == "m1" })
-        assertNull(vm.uiState.value.undo)
+        assertNull(settled(vm).undo)
     }
 
     @Test
     fun undoRestoresDeletedMessages() = runTest {
         val vm = newViewModel()
         vm.deleteMessages(setOf("m1", "m2"))
-        assertEquals("2 messages deleted", vm.uiState.value.undo?.message)
+        assertEquals("2 messages deleted", settled(vm).undo?.message)
         vm.undoDelete()
         testScheduler.advanceTimeBy(ConversationViewModel.UNDO_WINDOW_MS * 2)
         testScheduler.runCurrent()
-        assertTrue(vm.uiState.value.messages().any { it.id == "m1" })
+        assertTrue(settled(vm).messages().any { it.id == "m1" })
         assertEquals(3, provider.observeMessages("t1").first().size)
     }
 
     @Test
     fun copiedTextIsInReadingOrder() = runTest {
         val vm = newViewModel()
+        testScheduler.runCurrent()
         assertEquals(
             "Are we still on for dinner tonight?\nPerfect. I'll grab a table 🙌",
             vm.textOf(setOf("m3", "m1")),
@@ -154,12 +178,12 @@ class ConversationViewModelTest {
         val vm = newViewModel()
         vm.beginSelection("m1")
         vm.toggleSelection("m2")
-        assertEquals(setOf("m1", "m2"), vm.uiState.value.selection)
-        assertTrue(vm.uiState.value.selecting)
+        assertEquals(setOf("m1", "m2"), settled(vm).selection)
+        assertTrue(settled(vm).selecting)
         vm.toggleSelection("m1")
-        assertEquals(setOf("m2"), vm.uiState.value.selection)
-        vm.deleteMessages(vm.uiState.value.selection)
-        assertFalse(vm.uiState.value.selecting)
+        assertEquals(setOf("m2"), settled(vm).selection)
+        vm.deleteMessages(settled(vm).selection)
+        assertFalse(settled(vm).selecting)
     }
 
     @Test
@@ -173,25 +197,25 @@ class ConversationViewModelTest {
 
     @Test
     fun theOtherPersonTypesThenReplies() = runTest {
-        provider = MockMessagingProvider(clock, replyScope = backgroundScope)
-        val vm = newViewModel()
+        val vm = newViewModel(replies = true)
         vm.send("Are you there?")
 
         testScheduler.advanceTimeBy(2_500)
         testScheduler.runCurrent()
-        assertEquals("Maya is typing", vm.uiState.value.typing)
+        assertEquals("Maya is typing", settled(vm).typing)
 
         testScheduler.advanceTimeBy(2_000)
         testScheduler.runCurrent()
-        assertNull(vm.uiState.value.typing)
-        val newest = vm.uiState.value.messages().first()
-        assertFalse(newest.outgoing)
-        assertNotNull(vm.uiState.value.messages().firstOrNull { it.outgoing && it.status == "Read" })
+        assertNull(settled(vm).typing)
+        // The frozen clock gives the reply the same timestamp as the sent message, so look for it rather than
+        // relying on its position.
+        assertTrue(settled(vm).messages().any { !it.outgoing && it.id.startsWith("m-") })
+        assertNotNull(settled(vm).messages().firstOrNull { it.outgoing && it.status == "Read" })
     }
 
     @Test
     fun groupConversationsDescribeEveryone() = runTest {
-        val state = newViewModel("t4").uiState.value
+        val state = settled(newViewModel("t4"))
         assertEquals("Sam Okafor, Lena Fischer", state.title)
         assertEquals("2 people", state.subtitle)
         assertEquals(2, state.participants.size)
@@ -200,8 +224,9 @@ class ConversationViewModelTest {
 
     @Test
     fun newConversationsAreEmpty() = runTest {
+        useData()
         val id = provider.startConversation(listOf("c8", "c1"))
-        val state = newViewModel(id).uiState.value
+        val state = settled(newViewModel(id))
         assertTrue(state.isEmpty)
         assertFalse(state.notFound)
     }

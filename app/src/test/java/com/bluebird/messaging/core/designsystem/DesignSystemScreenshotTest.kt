@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -23,6 +24,10 @@ import com.bluebird.messaging.core.designsystem.catalog.RowSample
 import com.bluebird.messaging.core.designsystem.catalog.StateSample
 import com.bluebird.messaging.core.designsystem.catalog.TypeSample
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
+import androidx.test.core.app.ApplicationProvider
+import com.bluebird.messaging.core.data.LocalMessageStore
+import com.bluebird.messaging.core.data.PreferencesRepository
+import com.bluebird.messaging.core.data.db.BluebirdDatabase
 import com.bluebird.messaging.core.provider.MockMessagingProvider
 import com.bluebird.messaging.core.data.InMemoryDraftStore
 import com.bluebird.messaging.feature.conversation.ConversationScreen
@@ -32,6 +37,7 @@ import com.bluebird.messaging.feature.inbox.InboxViewModel
 import com.bluebird.messaging.feature.settings.SettingsScreen
 import com.github.takahirom.roborazzi.captureRoboImage
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -60,7 +66,16 @@ class DesignSystemScreenshotTest {
                 }
             }
         }
-        compose.mainClock.advanceTimeBy(600)
+        // Database reads complete on background threads: keep letting them reach the screen until nothing is loading.
+        var waited = 0
+        while (waited < 3_000) {
+            Thread.sleep(50)
+            waited += 50
+            compose.mainClock.advanceTimeBy(50)
+            compose.waitForIdle()
+            val loading = compose.onAllNodesWithContentDescription("Loading").fetchSemanticsNodes().isNotEmpty()
+            if (!loading && waited >= 500) break
+        }
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/${name}_${if (dark) "dark" else "light"}.png")
     }
 
@@ -121,10 +136,26 @@ class DesignSystemScreenshotTest {
         CatalogSection("Inputs") { InputSample() }
     }
 
+    /** A fresh in-memory database on Room's usual background threads; [snap] waits for the data to arrive. */
+    private fun screenshotProvider(seed: Boolean = true): MockMessagingProvider {
+        val db = BluebirdDatabase.build(ApplicationProvider.getApplicationContext(), name = null)
+        databases += db
+        return MockMessagingProvider(
+            LocalMessageStore(db),
+            PreferencesRepository(db),
+            seedSampleData = seed,
+        ).also { runBlocking { it.ensureSeeded() } }
+    }
+
+    private val databases = mutableListOf<BluebirdDatabase>()
+
+    @After
+    fun closeDatabases() = databases.forEach { it.close() }
+
     @Composable
     private fun Conversation(id: String, draft: String = "", setup: (ConversationViewModel) -> Unit = {}) {
         val vm = remember {
-            val provider = MockMessagingProvider()
+            val provider = screenshotProvider()
             val conversationId = if (id == "new") runBlocking { provider.startConversation(listOf("c11")) } else id
             ConversationViewModel(conversationId, provider, InMemoryDraftStore()).also(setup)
         }
@@ -134,7 +165,7 @@ class DesignSystemScreenshotTest {
     @Composable
     private fun Inbox(query: String = "", seed: Boolean = true, deleteFirst: String? = null) {
         val vm = remember {
-            InboxViewModel(MockMessagingProvider(seedSampleData = seed)).also { vm -> deleteFirst?.let(vm::delete) }
+            InboxViewModel(screenshotProvider(seed)).also { vm -> deleteFirst?.let(vm::delete) }
         }
         InboxScreen(
             viewModel = vm,

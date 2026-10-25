@@ -14,7 +14,7 @@ messages (no SMS, no iMessage). The connection status is always shown as simulat
 | Inbox | Done (Prompt 3): search, pinned grid, swipe and long-press actions, delete with undo, new message |
 | Conversation | Done (Prompt 4): timeline, replies, reactions, selection, copy/delete with undo, drafts |
 | Contacts, Settings | Placeholder screens |
-| Local persistence (Room) | Not started |
+| Local persistence (Room) | Done (Prompt 5): everything survives restarts |
 | Real messaging transport | Out of scope for this milestone |
 
 ## Tech stack
@@ -119,10 +119,30 @@ all state; the screen only renders.
   bubble and inside the composer. The composer is iOS 26 style: a glass + button and a glass field whose blue send
   arrow appears once there is text. Selection mode supports multi-copy and multi-delete. Deletes have a 4-second undo.
 - Group conversations show sender names and avatars once per run.
-- Drafts are kept per conversation when you leave and come back (in memory until Prompt 5).
+- Drafts are saved per conversation (after a short pause in typing, and when you leave) and restored when you
+  come back, even after the app is closed.
 - Header: a round glass Back button, the avatar, and the name in a glass capsule; tapping it opens details, where calling is shown as unavailable and the
   conversation is clearly labelled simulated. The attachment button lists photo and camera options as "coming in a
   later update".
+
+## Local storage
+
+`core/data`. A Room database (`bluebird.db`) is the source of truth; the mock provider writes through it and
+screens read from it via Flows, so every change appears immediately and survives the app being closed, killed or
+the phone restarting.
+
+- **Stored:** contacts, conversations and participants, messages (with delivery state and reply links), reactions,
+  attachment details and local file references, pins and manual unread marks, drafts, and preferences (theme).
+- **Not stored:** "typing" indicators (momentary by nature).
+- **Performance:** every query runs off the main thread; unread counts and latest messages are computed in SQL
+  with indexes on `(conversationId, sentAt)` and `(conversationId, deliveryState)`. Ordering is deterministic
+  (time, then id).
+- **Integrity:** foreign keys with cascades, so deleting a conversation removes its messages, reactions,
+  attachments and draft. New rows get random UUIDs, so IDs never collide across launches.
+- **Attachments:** a missing local file is reported as `Missing` (shown as a placeholder) instead of failing.
+- **Migrations:** the schema is exported to `app/schemas/` and committed. Every schema change must bump the version
+  and add a `Migration`; destructive migration is never enabled. `DatabaseSchemaTest` fails if the exported schema
+  and the code drift apart.
 
 ## Building
 
@@ -165,8 +185,11 @@ You can also copy the APK to the device and open it, after allowing installs fro
 
 ## Known limitations
 
-- The inbox is fully functional against mock data, but changes (pins, read state, deletions, new conversations) are
-  kept in memory only and reset when the app restarts, until local persistence arrives in Prompt 5.
+- All conversations are sample data on this device. They are added once, on first launch, and are not re-added if
+  you delete them (clearing the app's storage resets everything).
+- The theme setting is stored but there is no Settings control for it yet (Prompt 7). On launch the saved theme
+  loads a moment after the first frame, so a non-system choice could briefly flash the system theme.
+- Attachment details are stored, but nothing creates attachments yet (Prompt 6).
 - Replies are simulated: after you send a message it goes Sent → Delivered → Read, the mock contact shows
   "typing", then answers with a canned reply.
 - Attachments (photos, camera) and emoji picking are not implemented yet.

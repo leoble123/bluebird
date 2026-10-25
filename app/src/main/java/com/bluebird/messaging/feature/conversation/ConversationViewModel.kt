@@ -13,6 +13,7 @@ import com.bluebird.messaging.core.model.DeliveryState
 import com.bluebird.messaging.core.model.Message
 import com.bluebird.messaging.core.provider.MessagingProvider
 import com.bluebird.messaging.feature.inbox.AvatarSpec
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -21,6 +22,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -56,6 +59,7 @@ data class ConversationUiState(
     val isEmpty: Boolean get() = !isLoading && !notFound && items.isEmpty()
 }
 
+@OptIn(FlowPreview::class)
 class ConversationViewModel(
     private val conversationId: String,
     private val provider: MessagingProvider,
@@ -67,8 +71,8 @@ class ConversationViewModel(
     timeTicks: Flow<Instant> = minuteTicks(clock),
 ) : ViewModel() {
 
-    /** The draft to restore into the composer when the screen opens. */
-    val initialDraft: String = drafts.get(conversationId)
+    /** Unsaved composer text; saved after a short pause in typing, and flushed when the screen goes away. */
+    private val pendingDraft = MutableStateFlow<String?>(null)
 
     private val replyToId = MutableStateFlow<String?>(null)
     private val selecting = MutableStateFlow(false)
@@ -96,6 +100,9 @@ class ConversationViewModel(
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ConversationUiState())
 
     init {
+        viewModelScope.launch {
+            pendingDraft.filterNotNull().debounce(DRAFT_SAVE_DELAY_MS).collect { drafts.set(conversationId, it) }
+        }
         // Incoming messages count as read only while the conversation is actually on screen.
         viewModelScope.launch {
             combine(visible, conversation, messages) { isVisible, conv, msgs ->
@@ -108,8 +115,17 @@ class ConversationViewModel(
         visible.value = isVisible
     }
 
+    /** The saved draft to restore into the composer when the screen opens. */
+    suspend fun loadDraft(): String = drafts.get(conversationId)
+
     fun onDraftChanged(text: String) {
-        drafts.set(conversationId, text)
+        pendingDraft.value = text
+    }
+
+    override fun onCleared() {
+        // Typing stopped less than a moment ago: save it now, outliving this ViewModel.
+        val unsaved = pendingDraft.value ?: return
+        commitScope?.launch { drafts.set(conversationId, unsaved) }
     }
 
     /** Sends [text] (replying to the quoted message, if any). Returns false for blank input. */
@@ -118,8 +134,12 @@ class ConversationViewModel(
         if (trimmed.isEmpty()) return false
         val replyTo = replyToId.value
         replyToId.value = null
-        drafts.set(conversationId, "")
-        viewModelScope.launch { provider.sendMessage(conversationId, trimmed, replyTo) }
+        pendingDraft.value = ""
+        viewModelScope.launch {
+            drafts.set(conversationId, "")
+            // The conversation can vanish mid-send (deleted elsewhere); that's not worth crashing over.
+            runCatching { provider.sendMessage(conversationId, trimmed, replyTo) }
+        }
         return true
     }
 
@@ -234,6 +254,7 @@ class ConversationViewModel(
 
     companion object {
         const val UNDO_WINDOW_MS = 4_000L
+        const val DRAFT_SAVE_DELAY_MS = 400L
 
         private fun Contact.firstName() = displayName.trim().substringBefore(' ').ifBlank { phoneOrHandle }
 

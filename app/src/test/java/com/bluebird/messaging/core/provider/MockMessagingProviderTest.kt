@@ -1,31 +1,47 @@
 package com.bluebird.messaging.core.provider
 
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.bluebird.messaging.core.model.DeliveryState
+import com.bluebird.messaging.testing.TestData
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(AndroidJUnit4::class)
 class MockMessagingProviderTest {
 
     private val now = Instant.parse("2026-10-24T12:00:00Z")
-    private val provider = MockMessagingProvider(Clock.fixed(now, ZoneOffset.UTC))
+    private val clock = Clock.fixed(now, ZoneOffset.UTC)
+
+    /** Runs [block] against a freshly seeded database, closing it afterwards. */
+    private fun withProvider(seed: Boolean = true, replies: Boolean = false, block: suspend TestScope.(MockMessagingProvider) -> Unit) =
+        runTest {
+            val data = TestData(this, clock, seedSampleData = seed, replyScope = if (replies) backgroundScope else null)
+            try {
+                block(data.provider)
+            } finally {
+                data.close()
+            }
+        }
 
     @Test
-    fun reportsItselfAsSimulated() {
+    fun reportsItselfAsSimulated() = withProvider { provider ->
         assertTrue(provider.info.isSimulated)
     }
 
     @Test
-    fun pinnedConversationsComeFirstThenMostRecent() = runTest {
+    fun pinnedConversationsComeFirstThenMostRecent() = withProvider { provider ->
         val conversations = provider.observeConversations().first()
         val pinnedCount = conversations.count { it.isPinned }
         assertTrue(pinnedCount > 0)
@@ -35,7 +51,7 @@ class MockMessagingProviderTest {
     }
 
     @Test
-    fun sendingAMessageUpdatesThreadAndPreview() = runTest {
+    fun sendingAMessageUpdatesThreadAndPreview() = withProvider { provider ->
         val sent = provider.sendMessage("t2", "  On my way  ")
 
         assertEquals("On my way", sent.text)
@@ -47,20 +63,26 @@ class MockMessagingProviderTest {
     }
 
     @Test
-    fun unreadCountsOnlyIncomingUnreadMessages() = runTest {
+    fun unreadCountsOnlyIncomingUnreadMessages() = withProvider { provider ->
         val byId = provider.observeConversations().first().associateBy { it.id }
         assertEquals(1, byId.getValue("t1").unreadCount)
         assertEquals(2, byId.getValue("t4").unreadCount)
         assertEquals(0, byId.getValue("t3").unreadCount)
     }
 
-    @Test(expected = IllegalArgumentException::class)
-    fun rejectsBlankMessages() = runTest {
-        provider.sendMessage("t1", "   ")
+    @Test
+    fun rejectsBlankMessages() = withProvider { provider ->
+        assertTrue(runCatching { provider.sendMessage("t1", "   ") }.exceptionOrNull() is IllegalArgumentException)
     }
 
     @Test
-    fun pinnedConversationsKeepTheOrderTheyWerePinnedIn() = runTest {
+    fun rejectsMessagesToDeletedConversations() = withProvider { provider ->
+        provider.deleteConversation("t3")
+        assertTrue(runCatching { provider.sendMessage("t3", "hello?") }.exceptionOrNull() is IllegalArgumentException)
+    }
+
+    @Test
+    fun pinnedConversationsKeepTheOrderTheyWerePinnedIn() = withProvider { provider ->
         suspend fun pinnedIds() = provider.observeConversations().first().filter { it.isPinned }.map { it.id }
         assertEquals(listOf("t1", "t5", "t6"), pinnedIds())
 
@@ -72,7 +94,7 @@ class MockMessagingProviderTest {
     }
 
     @Test
-    fun markReadAndUnread() = runTest {
+    fun markReadAndUnread() = withProvider { provider ->
         suspend fun t1() = provider.observeConversations().first().first { it.id == "t1" }
         assertTrue(t1().hasUnread)
 
@@ -89,7 +111,7 @@ class MockMessagingProviderTest {
     }
 
     @Test
-    fun deleteRemovesConversationAndItsMessages() = runTest {
+    fun deleteRemovesConversationAndItsMessages() = withProvider { provider ->
         provider.deleteConversation("t2")
         assertNull(provider.observeConversations().first().firstOrNull { it.id == "t2" })
         assertTrue(provider.observeMessages("t2").first().isEmpty())
@@ -97,7 +119,7 @@ class MockMessagingProviderTest {
     }
 
     @Test
-    fun startConversationReusesAnExistingThreadOrCreatesAnEmptyOne() = runTest {
+    fun startConversationReusesAnExistingThreadOrCreatesAnEmptyOne() = withProvider { provider ->
         assertEquals("t1", provider.startConversation(listOf("c1")))
         assertEquals("t4", provider.startConversation(listOf("c5", "c4")))
 
@@ -108,41 +130,47 @@ class MockMessagingProviderTest {
     }
 
     @Test
-    fun searchIsCaseInsensitiveAndNewestFirst() = runTest {
+    fun searchIsCaseInsensitiveNewestFirstAndTreatsWildcardsLiterally() = withProvider { provider ->
         val matches = provider.searchMessages("THE")
         assertTrue(matches.isNotEmpty())
         assertTrue(matches.all { it.message.text.contains("the", ignoreCase = true) })
         assertEquals(matches.map { it.message.sentAt }.sortedDescending(), matches.map { it.message.sentAt })
         assertTrue(provider.searchMessages("   ").isEmpty())
+        assertTrue(provider.searchMessages("%").isEmpty())
+        assertTrue(provider.searchMessages("_").isEmpty())
     }
 
     @Test
-    fun sentMessagesAreDeliveredReadAndAnswered() = runTest {
-        val replying = MockMessagingProvider(Clock.fixed(now, ZoneOffset.UTC), replyScope = backgroundScope)
-        val sent = replying.sendMessage("t2", "Got it")
+    fun sentMessagesAreDeliveredReadAndAnswered() = withProvider(replies = true) { provider ->
+        val sent = provider.sendMessage("t2", "Got it")
 
         testScheduler.advanceTimeBy(900)
         testScheduler.runCurrent()
-        assertEquals(DeliveryState.Delivered, replying.observeMessages("t2").first().first { it.id == sent.id }.deliveryState)
+        assertEquals(DeliveryState.Delivered, provider.observeMessages("t2").first().first { it.id == sent.id }.deliveryState)
 
-        testScheduler.advanceTimeBy(3_000)
+        testScheduler.advanceTimeBy(1_500)
         testScheduler.runCurrent()
-        val thread = replying.observeMessages("t2").first()
+        assertEquals(setOf("c2"), provider.observeTyping("t2").first())
+
+        testScheduler.advanceTimeBy(2_000)
+        testScheduler.runCurrent()
+        val thread = provider.observeMessages("t2").first()
         assertEquals(DeliveryState.Read, thread.first { it.id == sent.id }.deliveryState)
-        val reply = thread.last()
+        // The reply shares the frozen clock's timestamp with the sent message, so find it by sender and id.
+        val reply = thread.single { !it.isOutgoing && it.id.startsWith("m-") }
         assertEquals("c2", reply.senderId)
-        assertTrue(replying.observeConversations().first().first { it.id == "t2" }.hasUnread)
+        assertTrue(provider.observeTyping("t2").first().isEmpty())
+        assertTrue(provider.observeConversations().first().first { it.id == "t2" }.hasUnread)
     }
 
     @Test
-    fun emptyProviderHasNoConversations() = runTest {
-        val empty = MockMessagingProvider(Clock.fixed(now, ZoneOffset.UTC), seedSampleData = false)
-        assertTrue(empty.observeConversations().first().isEmpty())
-        assertTrue(empty.observeContacts().first().isNotEmpty())
+    fun emptyProviderStillHasContacts() = withProvider(seed = false) { provider ->
+        assertTrue(provider.observeConversations().first().isEmpty())
+        assertTrue(provider.observeContacts().first().isNotEmpty())
     }
 
     @Test
-    fun yourReactionReplacesOrTogglesButOthersStay() = runTest {
+    fun yourReactionReplacesOrTogglesButOthersStay() = withProvider { provider ->
         suspend fun reactions() = provider.observeMessages("t1").first().first { it.id == "m2" }.reactions
         assertEquals(listOf("c1"), reactions().map { it.senderId })
 
@@ -155,7 +183,7 @@ class MockMessagingProviderTest {
     }
 
     @Test
-    fun deletingMessagesUpdatesThePreview() = runTest {
+    fun deletingMessagesUpdatesThePreview() = withProvider { provider ->
         provider.deleteMessages(setOf("m3"))
         val t1 = provider.observeConversations().first().first { it.id == "t1" }
         assertEquals("m2", t1.lastMessage?.id)
@@ -163,8 +191,15 @@ class MockMessagingProviderTest {
     }
 
     @Test
-    fun repliesRememberWhatTheyQuote() = runTest {
+    fun repliesRememberWhatTheyQuote() = withProvider { provider ->
         val sent = provider.sendMessage("t1", "Sounds great", replyToId = "m3")
         assertEquals("m3", provider.observeMessages("t1").first().last { it.id == sent.id }.replyToId)
+    }
+
+    @Test
+    fun sampleDataIsAddedOnlyOnce() = withProvider { provider ->
+        provider.deleteConversation("t1")
+        provider.ensureSeeded()
+        assertNull(provider.observeConversations().first().firstOrNull { it.id == "t1" })
     }
 }

@@ -2,6 +2,13 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.roborazzi)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.androidx.room)
+}
+
+room {
+    // Exported schemas are committed so every migration can be verified against the exact previous version.
+    schemaDirectory("$projectDir/schemas")
 }
 
 android {
@@ -66,8 +73,14 @@ dependencies {
     implementation(libs.haze.blur)
     implementation(libs.haze.glass)
 
+    // Local persistence.
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.room.testing)
 
     // JVM screenshot tests (Robolectric + Roborazzi): render real composables without an emulator.
     testImplementation(platform(libs.androidx.compose.bom))
@@ -78,4 +91,9 @@ dependencies {
     testImplementation(libs.roborazzi.compose)
     testImplementation(libs.roborazzi.junit.rule)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+// DatabaseSchemaTest reads the exported schemas from disk; make sure a schema change always re-runs the tests.
+tasks.withType<Test>().configureEach {
+    inputs.dir("schemas").withPathSensitivity(PathSensitivity.RELATIVE)
 }

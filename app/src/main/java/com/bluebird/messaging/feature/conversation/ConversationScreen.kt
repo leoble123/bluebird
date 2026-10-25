@@ -6,6 +6,8 @@ import com.bluebird.messaging.core.designsystem.component.GlassIconButton
 import com.bluebird.messaging.core.designsystem.component.GlassTextButton
 import com.bluebird.messaging.core.designsystem.theme.ScrollEdge
 import com.bluebird.messaging.core.designsystem.theme.scrollEdgeEffect
+import kotlinx.coroutines.flow.drop
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.animation.core.Animatable
 import androidx.activity.compose.BackHandler
@@ -71,7 +73,7 @@ import kotlinx.coroutines.launch
 fun ConversationScreen(
     viewModel: ConversationViewModel,
     onBack: () -> Unit,
-    draft: TextFieldState = rememberTextFieldState(viewModel.initialDraft),
+    draft: TextFieldState = rememberTextFieldState(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -88,8 +90,11 @@ fun ConversationScreen(
         viewModel.setVisible(true)
         onPauseOrDispose { viewModel.setVisible(false) }
     }
-    LaunchedEffect(draft) {
-        snapshotFlow { draft.text.toString() }.collect(viewModel::onDraftChanged)
+    LaunchedEffect(viewModel, draft) {
+        // Restore the saved draft first (unless something was already typed), then save changes as they happen.
+        val saved = viewModel.loadDraft()
+        if (draft.text.isEmpty() && saved.isNotEmpty()) draft.setTextAndPlaceCursorAtEnd(saved)
+        snapshotFlow { draft.text.toString() }.drop(1).collect(viewModel::onDraftChanged)
     }
     LaunchedEffect(notice) {
         if (notice != null) {
