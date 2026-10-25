@@ -139,35 +139,27 @@ fun Modifier.liquidGlass(
 enum class ScrollEdge { Top, Bottom }
 
 /**
- * iOS's scroll edge effect: content passing under floating controls at the top or bottom of the screen is
- * softly blurred and faded toward the edge, instead of meeting a solid bar.
+ * iOS's scroll edge effect: content passing under floating controls at the top or bottom of the screen fades
+ * softly into the background toward the edge, instead of meeting a solid bar.
+ *
+ * Drawn as a plain gradient rather than a live blur: these strips span the full width and redraw on every scroll
+ * frame, so a blur here was the single largest per-frame cost. The glass controls on top still blur what's behind
+ * them.
  */
 @Composable
 fun Modifier.scrollEdgeEffect(
     edge: ScrollEdge,
-    /** The screen's background color, which the blurred edge fades into. */
+    /** The screen's background color, which the edge fades into. */
     color: Color = BluebirdTheme.colors.background,
 ): Modifier {
-    val settings = BluebirdTheme.glassSettings
-    val state = LocalGlassState.current
-    val solid = color
-    val fade = remember(edge, solid) {
-        val stops = listOf(solid.copy(alpha = 0.94f), solid.copy(alpha = 0.7f), solid.copy(alpha = 0f))
-        Brush.verticalGradient(if (edge == ScrollEdge.Top) stops else stops.reversed())
+    val fade = remember(edge, color) {
+        val stops = arrayOf(
+            0f to color,
+            0.45f to color.copy(alpha = 0.92f),
+            0.75f to color.copy(alpha = 0.6f),
+            1f to color.copy(alpha = 0f),
+        )
+        Brush.verticalGradient(*if (edge == ScrollEdge.Top) stops else stops.map { (1f - it.first) to it.second }.reversed().toTypedArray())
     }
-    if (state == null || !settings.blur) return background(fade)
-    val style = remember(edge, solid) {
-        // Fully applied across the controls, fading only in the last quarter toward the content.
-        val maskStops = arrayOf(0f to Color.Black, 0.75f to Color.Black, 1f to Color.Transparent)
-        val reversedStops = arrayOf(0f to Color.Transparent, 0.25f to Color.Black, 1f to Color.Black)
-        HazeBlurStyle {
-            blurRadius(18.dp)
-            noiseFactor(0f)
-            backgroundColor(solid)
-            colorEffects(listOf(HazeColorEffect.tint(solid.copy(alpha = 0.72f))))
-            mask(Brush.verticalGradient(*if (edge == ScrollEdge.Top) maskStops else reversedStops))
-            fallbackColorEffect(HazeColorEffect.tint(solid.copy(alpha = 0.9f)))
-        }
-    }
-    return hazeBlur(input = HazeInput.Sources(state), style = style, performanceMode = HazePerformanceMode.Performance)
+    return background(fade)
 }

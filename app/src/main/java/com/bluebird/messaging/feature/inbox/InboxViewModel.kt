@@ -12,7 +12,9 @@ import com.bluebird.messaging.core.model.Message
 import com.bluebird.messaging.core.model.MessageMatch
 import com.bluebird.messaging.core.provider.MessagingProvider
 import com.bluebird.messaging.core.ui.formatConversationTimestamp
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -21,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
@@ -79,6 +82,8 @@ class InboxViewModel(
     private val commitScope: CoroutineScope? = null,
     /** Re-emits the current time so "9:41 AM" can roll over to "Yesterday". */
     timeTicks: Flow<Instant> = minuteTicks(clock),
+    /** Where screen state is assembled: off the main thread, so building a long list never costs a frame. */
+    computeDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ViewModel() {
 
     private val query = MutableStateFlow("")
@@ -98,7 +103,7 @@ class InboxViewModel(
     val uiState: StateFlow<InboxUiState> =
         combine(snapshots, pendingDeletes, undo, filter, timeTicks) { snap, pending, undoNotice, activeFilter, now ->
             buildState(snap, pending, undoNotice, activeFilter, now)
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), InboxUiState())
+        }.flowOn(computeDispatcher).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), InboxUiState())
 
     val contacts: StateFlow<List<ContactItem>> = combine(provider.observeContacts(), contactQuery) { all, q ->
         all.filter { q.isBlank() || it.displayName.contains(q, true) || it.phoneOrHandle.contains(q, true) }

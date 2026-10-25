@@ -70,13 +70,19 @@ Lives in `core/designsystem`. Screens read everything through `BluebirdTheme.col
   effect: GPU shaders on Android 13+, a simpler fallback below. Per Apple's guidance it is used only in the
   controls layer, never on rows or bubbles.
 - **Scroll edge effect** (`scrollEdgeEffect`): instead of solid bars, content passing under the top and bottom
-  controls is blurred and faded into the screen background.
+  controls fades into the screen background. It is a plain gradient, not a live blur, because it redraws on every
+  scroll frame across the full width.
+- **Navigation** (`navigation/PushTransition.kt`): the iOS push. A new screen slides in over the current one,
+  which drifts a third of the way left and dims, with a soft shadow on the moving edge. Android's back gesture
+  (swipe in from the screen edge, Android 14+ with gesture navigation) drives the same motion under your finger:
+  let go far enough to go back, or not far enough to stay.
 - **Frosted glass** (`glass`): menus and sheets use a standard backdrop blur.
 - `GlassSettings(blur = false)` turns every glass effect into a plain translucent fill.
 - **Details:** iOS-style bubbles with a curled tail on the last bubble of each run, stacked tapback badges, a spring "settle" on the send button, gentle press-compression on bubbles and buttons, and large
   emoji-only messages.
 - **Performance rules:** message bubbles are flat solid colors; animated values are read in the draw/layer phase;
-  typing uses `TextFieldState` so keystrokes don't recompose screens; all motion collapses to instant when system
+  typing uses `TextFieldState` so keystrokes don't recompose screens; screen state (timelines, inbox rows) is
+  assembled off the main thread and date formatters are reused; all motion collapses to instant when system
   animations are off.
 - **Adaptive:** `BluebirdLayout` provides gutters, readable widths, list-pane width and bubble width caps for
   compact, medium and expanded windows.

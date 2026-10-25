@@ -62,7 +62,7 @@ class ConversationViewModelTest {
 
     private fun TestScope.newViewModel(id: String = "t1", replies: Boolean = false): ConversationViewModel {
         useData(replies)
-        val vm = ConversationViewModel(id, provider, drafts, clock, ZoneOffset.UTC, backgroundScope, flowOf(now))
+        val vm = ConversationViewModel(id, provider, drafts, clock, ZoneOffset.UTC, backgroundScope, flowOf(now), UnconfinedTestDispatcher(testScheduler))
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
         return vm
     }

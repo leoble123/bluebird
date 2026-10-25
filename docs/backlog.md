@@ -32,3 +32,18 @@ features Apple's Messages doesn't offer. All of them work with mock data and loc
 - [ ] Home-screen conversation widgets.
 - [ ] Pop a conversation out into its own window; drag text and messages between panes on tablets.
 - [ ] Predictive back gesture.
+
+## Delivery plan (Prompt 6 + iOS features + this backlog)
+
+Each batch ends with all tests passing and a fresh preview APK.
+
+1. **Motion and smoothness** (done): iOS push transitions with gesture-driven back, gradient scroll edges,
+   screen state built off the main thread.
+2. **Media (Prompt 6 core):** Android Photo Picker for photos and videos, composer previews with remove, copies
+   kept in app storage, thumbnails, graceful "missing file" placeholders, forwarding.
+3. **iOS conversation features:** emoji tapbacks beyond the six, edit and unsend (with the iOS time limits),
+   inline reply threads, message effects (simulated), "Delivered quietly"-style labels, link previews (offline,
+   from the URL only), copy-code chip, partial quote, pinned messages, jump to date, "N new messages" jump.
+4. **Organization:** folders/labels, snooze, timed mute, reminders, starred messages, draft badge, private notes.
+5. **Personalization and Android extras:** per-chat bubble color, compact density, high-contrast bubbles,
+   one-handed mode, conversation bubbles, widgets, pop-out windows.

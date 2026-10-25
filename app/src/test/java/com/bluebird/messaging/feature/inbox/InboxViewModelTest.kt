@@ -54,7 +54,7 @@ class InboxViewModelTest {
 
     private fun TestScope.newViewModel(seed: Boolean = true): InboxViewModel {
         data = TestData(this, clock, seedSampleData = seed)
-        val vm = InboxViewModel(provider, clock, ZoneOffset.UTC, commitScope = backgroundScope, timeTicks = flowOf(now))
+        val vm = InboxViewModel(provider, clock, ZoneOffset.UTC, commitScope = backgroundScope, timeTicks = flowOf(now), computeDispatcher = UnconfinedTestDispatcher(testScheduler))
         // Keep the state flows active, as a visible screen would.
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.contacts.collect {} }

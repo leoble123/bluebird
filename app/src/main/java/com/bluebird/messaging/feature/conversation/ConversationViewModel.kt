@@ -13,7 +13,9 @@ import com.bluebird.messaging.core.model.DeliveryState
 import com.bluebird.messaging.core.model.Message
 import com.bluebird.messaging.core.provider.MessagingProvider
 import com.bluebird.messaging.feature.inbox.AvatarSpec
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -22,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
@@ -69,6 +72,8 @@ class ConversationViewModel(
     /** Where delayed deletes are committed, so leaving during the undo window still deletes. */
     private val commitScope: CoroutineScope? = null,
     timeTicks: Flow<Instant> = minuteTicks(clock),
+    /** Where screen state is assembled: off the main thread, so building a long list never costs a frame. */
+    computeDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ViewModel() {
 
     /** Unsaved composer text; saved after a short pause in typing, and flushed when the screen goes away. */
@@ -97,7 +102,7 @@ class ConversationViewModel(
     val uiState: StateFlow<ConversationUiState> =
         combine(conversation, messages, provider.observeTyping(conversationId), local, timeTicks) { conv, msgs, typing, l, now ->
             buildState(conv, msgs, typing, l, now)
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ConversationUiState())
+        }.flowOn(computeDispatcher).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ConversationUiState())
 
     init {
         viewModelScope.launch {

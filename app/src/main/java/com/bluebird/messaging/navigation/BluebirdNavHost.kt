@@ -1,13 +1,7 @@
 package com.bluebird.messaging.navigation
 
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -39,57 +33,65 @@ object Routes {
 fun BluebirdNavHost(container: AppContainer) {
     val navController = rememberNavController()
     val reduced = BluebirdTheme.motion.reduced
+    val push = remember(reduced) { PushTransitions(reduced) }
     NavHost(
         navController = navController,
         startDestination = Routes.INBOX,
-        // iOS-style push: the new screen slides in from the trailing edge while the old one drifts a third of the
-        // way out. Short and decelerating, so it never feels like waiting. No motion at all when animations are off.
-        enterTransition = { if (reduced) EnterTransition.None else slideInHorizontally(pushSpec()) { it } },
-        exitTransition = { if (reduced) ExitTransition.None else slideOutHorizontally(pushSpec()) { -it / 3 } },
-        popEnterTransition = { if (reduced) EnterTransition.None else slideInHorizontally(pushSpec()) { -it / 3 } },
-        popExitTransition = { if (reduced) ExitTransition.None else slideOutHorizontally(pushSpec()) { it } },
+        enterTransition = push.enter,
+        exitTransition = push.exit,
+        popEnterTransition = push.popEnter,
+        popExitTransition = push.popExit,
+        predictivePopEnterTransition = push.gesturePopEnter,
+        predictivePopExitTransition = push.gesturePopExit,
     ) {
         composable(Routes.INBOX) {
-            val vm: InboxViewModel = viewModel(factory = InboxViewModel.factory(container.messagingProvider, container.appScope))
-            InboxScreen(
-                viewModel = vm,
-                onOpenConversation = { navController.navigate(Routes.conversation(it)) },
-                onOpenContacts = { navController.navigate(Routes.CONTACTS) },
-                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
-            )
+            with(push) {
+                Screen {
+                    val vm: InboxViewModel = viewModel(factory = InboxViewModel.factory(container.messagingProvider, container.appScope))
+                    InboxScreen(
+                        viewModel = vm,
+                        onOpenConversation = { navController.navigate(Routes.conversation(it)) },
+                        onOpenContacts = { navController.navigate(Routes.CONTACTS) },
+                        onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                    )
+                }
+            }
         }
         composable(
             route = Routes.CONVERSATION,
             arguments = listOf(navArgument(Routes.CONVERSATION_ARG) { type = NavType.StringType }),
         ) { entry ->
-            val conversationId = entry.arguments?.getString(Routes.CONVERSATION_ARG).orEmpty()
-            val vm: ConversationViewModel = viewModel(
-                factory = ConversationViewModel.factory(
-                    conversationId,
-                    container.messagingProvider,
-                    container.draftStore,
-                    container.appScope,
-                ),
-            )
-            ConversationScreen(viewModel = vm, onBack = { navController.popBackStack() })
+            with(push) {
+                Screen {
+                    val conversationId = entry.arguments?.getString(Routes.CONVERSATION_ARG).orEmpty()
+                    val vm: ConversationViewModel = viewModel(
+                        factory = ConversationViewModel.factory(
+                            conversationId,
+                            container.messagingProvider,
+                            container.draftStore,
+                            container.appScope,
+                        ),
+                    )
+                    ConversationScreen(viewModel = vm, onBack = { navController.popBackStack() })
+                }
+            }
         }
         composable(Routes.CONTACTS) {
-            ContactsScreen(onBack = { navController.popBackStack() })
+            with(push) { Screen { ContactsScreen(onBack = { navController.popBackStack() }) } }
         }
         composable(Routes.SETTINGS) {
-            SettingsScreen(
-                providerName = container.messagingProvider.info.displayName,
-                onOpenDesignCatalog = { navController.navigate(Routes.DESIGN_CATALOG) },
-                onBack = { navController.popBackStack() },
-            )
+            with(push) {
+                Screen {
+                    SettingsScreen(
+                        providerName = container.messagingProvider.info.displayName,
+                        onOpenDesignCatalog = { navController.navigate(Routes.DESIGN_CATALOG) },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+            }
         }
         composable(Routes.DESIGN_CATALOG) {
-            DesignCatalogScreen(onBack = { navController.popBackStack() })
+            with(push) { Screen { DesignCatalogScreen(onBack = { navController.popBackStack() }) } }
         }
     }
 }
-
-/** Quick start, long gentle settle: close to UIKit's navigation push curve. */
-private val PushEasing = CubicBezierEasing(0.2f, 0.9f, 0.25f, 1f)
-
-private fun pushSpec() = tween<IntOffset>(durationMillis = 320, easing = PushEasing)

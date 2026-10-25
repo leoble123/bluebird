@@ -36,6 +36,7 @@ import com.bluebird.messaging.feature.inbox.InboxScreen
 import com.bluebird.messaging.feature.inbox.InboxViewModel
 import com.bluebird.messaging.feature.settings.SettingsScreen
 import com.github.takahirom.roborazzi.captureRoboImage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Rule
@@ -157,7 +158,7 @@ class DesignSystemScreenshotTest {
         val vm = remember {
             val provider = screenshotProvider()
             val conversationId = if (id == "new") runBlocking { provider.startConversation(listOf("c11")) } else id
-            ConversationViewModel(conversationId, provider, InMemoryDraftStore()).also(setup)
+            ConversationViewModel(conversationId, provider, InMemoryDraftStore(), computeDispatcher = Dispatchers.Unconfined).also(setup)
         }
         ConversationScreen(viewModel = vm, onBack = {}, draft = remember { TextFieldState(draft) })
     }
@@ -165,7 +166,7 @@ class DesignSystemScreenshotTest {
     @Composable
     private fun Inbox(query: String = "", seed: Boolean = true, deleteFirst: String? = null) {
         val vm = remember {
-            InboxViewModel(screenshotProvider(seed)).also { vm -> deleteFirst?.let(vm::delete) }
+            InboxViewModel(screenshotProvider(seed), computeDispatcher = Dispatchers.Unconfined).also { vm -> deleteFirst?.let(vm::delete) }
         }
         InboxScreen(
             viewModel = vm,

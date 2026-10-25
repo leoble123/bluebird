@@ -24,7 +24,7 @@ fun formatConversationTimestamp(
         daysAgo <= 0L -> formatTime(instant, zone, locale)
         daysAgo == 1L -> "Yesterday"
         daysAgo < 7L -> date.dayOfWeek.getDisplayName(TextStyle.FULL, locale)
-        else -> DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(locale).format(date)
+        else -> formatters(locale).shortDate.format(date)
     }
 }
 
@@ -46,10 +46,24 @@ fun formatSeparator(
         daysAgo <= 0L -> "Today $time"
         daysAgo == 1L -> "Yesterday $time"
         daysAgo < 7L -> "${at.dayOfWeek.getDisplayName(TextStyle.FULL, locale)} $time"
-        at.year == today.year -> "${DateTimeFormatter.ofPattern("EEE, MMM d", locale).format(at)} at $time"
-        else -> "${DateTimeFormatter.ofPattern("MMM d, yyyy", locale).format(at)} at $time"
+        at.year == today.year -> "${formatters(locale).dayMonth.format(at)} at $time"
+        else -> "${formatters(locale).monthDayYear.format(at)} at $time"
     }
 }
 
 fun formatTime(instant: Instant, zone: ZoneId = ZoneId.systemDefault(), locale: Locale = Locale.getDefault()): String =
-    DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale).format(instant.atZone(zone))
+    formatters(locale).time.format(instant.atZone(zone))
+
+/** Formatters are costly to build and safe to share, so each locale's set is built once rather than per row. */
+private class Formatters(val locale: Locale) {
+    val time: DateTimeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale)
+    val shortDate: DateTimeFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(locale)
+    val dayMonth: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE, MMM d", locale)
+    val monthDayYear: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy", locale)
+}
+
+@Volatile
+private var cachedFormatters: Formatters? = null
+
+private fun formatters(locale: Locale): Formatters =
+    cachedFormatters?.takeIf { it.locale == locale } ?: Formatters(locale).also { cachedFormatters = it }
