@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,11 +30,9 @@ import com.bluebird.messaging.core.designsystem.icon.BluebirdIcons
 import com.bluebird.messaging.core.designsystem.theme.AvatarSize
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
 import com.bluebird.messaging.core.designsystem.theme.Radii
-import com.bluebird.messaging.core.designsystem.theme.frost
 
 /**
- * Centered empty state. The icon sits in a small frost disc with an ice glint at its shoulder: one of the
- * few purely decorative touches in the app, and a cheap one.
+ * Centered empty state: an icon in a soft gray disc, a title, a short message, and an optional action.
  */
 @Composable
 fun EmptyState(
@@ -54,16 +51,11 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Box(Modifier.size(88.dp), contentAlignment = Alignment.Center) {
-            Box(Modifier.size(76.dp).frost(CircleShape), contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(34.dp))
-            }
-            Icon(
-                BluebirdIcons.Glint,
-                contentDescription = null,
-                tint = colors.warm,
-                modifier = Modifier.align(Alignment.TopEnd).offset(x = (-6).dp, y = 6.dp).size(16.dp),
-            )
+        Box(
+            Modifier.size(76.dp).clip(CircleShape).background(colors.surfaceSunken),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(34.dp))
         }
         Spacer(Modifier.height(20.dp))
         Text(title, style = typography.title3, color = colors.textPrimary, textAlign = TextAlign.Center)

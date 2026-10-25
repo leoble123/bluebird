@@ -196,9 +196,9 @@ object BluebirdIcons {
             line { moveTo(8f, 10.5f); verticalLineTo(8f); arcTo(4f, 4f, 0f, false, true, 16f, 8f); verticalLineTo(10.5f) }
         }
     }
-    /** Small four-point ice crystal glint, used sparingly as a decorative detail. */
-    val Glint by lazy {
-        icon("Glint") {
+    /** Small four-point sparkle, used sparingly as a decorative detail. */
+    val Sparkle by lazy {
+        icon("Sparkle") {
             solid {
                 moveTo(12f, 2.5f); curveTo(12.5f, 7.9f, 16.1f, 11.5f, 21.5f, 12f); curveTo(16.1f, 12.5f, 12.5f, 16.1f, 12f, 21.5f)
                 curveTo(11.5f, 16.1f, 7.9f, 12.5f, 2.5f, 12f); curveTo(7.9f, 11.5f, 11.5f, 7.9f, 12f, 2.5f); close()

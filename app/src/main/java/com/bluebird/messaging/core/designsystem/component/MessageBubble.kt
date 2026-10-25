@@ -38,9 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bluebird.messaging.core.designsystem.icon.BluebirdIcons
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
-import com.bluebird.messaging.core.designsystem.theme.FrostTone
 import com.bluebird.messaging.core.designsystem.theme.Radii
-import com.bluebird.messaging.core.designsystem.theme.frost
 import com.bluebird.messaging.core.model.DeliveryState
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -53,7 +51,7 @@ data class BubbleCorners(val topStart: Dp, val topEnd: Dp, val bottomEnd: Dp, va
 
 /**
  * Corner geometry. Bubbles in a group tighten their corners where they touch; the last bubble of a group gets the
- * "ice facet", a sharply tapered outer-bottom corner that replaces a speech tail.
+ * "facet", a sharply tapered outer-bottom corner that replaces a speech tail.
  */
 fun bubbleCorners(outgoing: Boolean, position: BubblePosition): BubbleCorners {
     val round = Radii.bubble
@@ -123,7 +121,7 @@ fun BubbleRow(
 }
 
 /**
- * A message bubble. Solid colors only: the timeline must stay cheap to draw at any length, so no frost here.
+ * A message bubble. Solid colors only: the timeline must stay cheap to draw at any length, so no glass here.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -250,7 +248,7 @@ fun TypingIndicator(modifier: Modifier = Modifier) {
     )
 }
 
-/** A reaction ("tapback") pinned to the corner of a bubble. Your own reactions take the accent-tinted frost. */
+/** A reaction ("tapback") pinned to the corner of a bubble, ringed in the background color. Yours are cobalt. */
 @Composable
 fun ReactionPill(
     emoji: String,
@@ -258,10 +256,15 @@ fun ReactionPill(
     mine: Boolean = false,
     count: Int = 1,
 ) {
+    val colors = BluebirdTheme.colors
     Row(
         modifier = modifier
-            .frost(Radii.pill, if (mine) FrostTone.Accent else FrostTone.Neutral)
-            .padding(horizontal = 7.dp, vertical = 3.dp),
+            .clip(Radii.pill)
+            .background(colors.background)
+            .padding(2.dp)
+            .clip(Radii.pill)
+            .background(if (mine) colors.accent else colors.bubbleIncoming)
+            .padding(horizontal = 7.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(emoji, style = BluebirdTheme.typography.callout)
@@ -270,7 +273,7 @@ fun ReactionPill(
             Text(
                 count.toString(),
                 style = BluebirdTheme.typography.caption,
-                color = if (mine) BluebirdTheme.colors.accent else BluebirdTheme.colors.textSecondary,
+                color = if (mine) colors.onAccent else colors.textSecondary,
             )
         }
     }

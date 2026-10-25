@@ -10,7 +10,7 @@ messages (no SMS, no iMessage). The connection status is always shown as simulat
 | Area | State |
 | --- | --- |
 | Project foundation, navigation shell, light/dark theme | Done (Prompt 1) |
-| Design system ("icy frost") | Done (Prompt 2); browse it in Settings → Design system |
+| Design system (iOS-style frosted glass) | Done (Prompt 2); browse it in Settings → Design system |
 | Inbox | Interim list using design-system rows, wired to mock data |
 | Conversation, Contacts, Settings | Placeholder screens |
 | Local persistence (Room) | Not started |
@@ -59,15 +59,15 @@ Screens never talk to a messaging network directly. They depend on `MessagingPro
 Lives in `core/designsystem`. Screens read everything through `BluebirdTheme.colors`, `.typography`, `.motion`,
 `.layout` and the tokens in `Tokens.kt`.
 
-- **Identity:** cobalt primary, apricot accent used sparingly, cool glacier neutrals (light) and abyssal ice layers
-  (dark). The system font with an iOS-like type rhythm. A custom rounded-stroke icon set (`BluebirdIcons`).
-- **Icy frost** (`Frost.kt`): hazy translucent surfaces with a soft top glow, two faint refraction streaks, a
-  delicate rim light, and a pre-generated grain texture. All static brushes cached per size: no blur, no runtime
-  shaders, no animation. Used only on chrome: search, composer, frosted top bars, menus, selection, reactions.
-  `FrostSettings(enabled = false)` turns every frost surface solid.
-- **Signature details:** the "ice facet" (a tapered outer corner on the last bubble of a group), deterministic
-  two-tone monogram avatars, a spring "settle" on the send button, gentle press-compression on bubbles and buttons,
-  large emoji-only messages, and a small ice glint on empty states.
+- **Identity:** cobalt primary, apricot accent used sparingly, iOS-style neutrals (white and grouped gray in light,
+  black and graphite in dark). The system font with an iOS-like type rhythm. A custom rounded-stroke icon set (`BluebirdIcons`).
+- **Frosted glass** (`Glass.kt`): real iOS-style backdrop blur via the Haze library. Floating chrome (top bars,
+  the composer, menus) blurs the content scrolling beneath it under a translucent white or graphite tint. GPU blur
+  on Android 12+; a translucent fill on Android 11 and below, or when `GlassSettings(blur = false)` is set.
+  Never used on list rows or message bubbles.
+- **Signature details:** the facet (a tapered outer corner on the last bubble of a group), deterministic two-tone
+  monogram avatars, a spring "settle" on the send button, gentle press-compression on bubbles and buttons, and large
+  emoji-only messages.
 - **Performance rules:** message bubbles are flat solid colors; animated values are read in the draw/layer phase;
   typing uses `TextFieldState` so keystrokes don't recompose screens; all motion collapses to instant when system
   animations are off.

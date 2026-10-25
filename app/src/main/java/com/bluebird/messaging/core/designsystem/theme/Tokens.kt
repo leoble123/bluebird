@@ -33,7 +33,7 @@ object Radii {
     val bubble: Dp = 20.dp
     /** Corner on the side where bubbles in a group touch. */
     val bubbleJoined: Dp = 6.dp
-    /** The "ice facet": the tapered outer corner on the last bubble of a group. */
+    /** The facet: the tapered outer corner on the last bubble of a group. */
     val bubbleFacet: Dp = 3.dp
 
     val pill = RoundedCornerShape(percent = 50)
@@ -42,7 +42,7 @@ object Radii {
 }
 
 /**
- * Depth comes from tonal layers (see surface roles in [BluebirdColors]) and frost rims, not drop shadows.
+ * Depth comes from tonal layers (see surface roles in [BluebirdColors]) and glass, not heavy drop shadows.
  * These sizes exist for components that genuinely float above content.
  */
 @Immutable

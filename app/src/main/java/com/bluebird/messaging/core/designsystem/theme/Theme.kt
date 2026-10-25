@@ -17,7 +17,7 @@ private val LocalBluebirdColors = staticCompositionLocalOf { LightBluebirdColors
 private val LocalBluebirdTypography = staticCompositionLocalOf { DefaultBluebirdTypography }
 private val LocalBluebirdMotion = staticCompositionLocalOf { BluebirdMotion(reduced = false) }
 private val LocalBluebirdLayout = staticCompositionLocalOf { BluebirdLayout.forWidth(411) }
-private val LocalFrostSettings = staticCompositionLocalOf { FrostSettings() }
+private val LocalGlassSettings = staticCompositionLocalOf { GlassSettings() }
 
 /**
  * Bluebird's theme. Provides the design system through [BluebirdTheme.colors] etc., and maps it onto
@@ -26,7 +26,7 @@ private val LocalFrostSettings = staticCompositionLocalOf { FrostSettings() }
 @Composable
 fun BluebirdTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    frostSettings: FrostSettings = FrostSettings(),
+    glassSettings: GlassSettings = GlassSettings(),
     content: @Composable () -> Unit,
 ) {
     val colors = if (darkTheme) DarkBluebirdColors else LightBluebirdColors
@@ -42,7 +42,7 @@ fun BluebirdTheme(
         LocalBluebirdTypography provides DefaultBluebirdTypography,
         LocalBluebirdMotion provides motion,
         LocalBluebirdLayout provides layout,
-        LocalFrostSettings provides frostSettings,
+        LocalGlassSettings provides glassSettings,
     ) {
         MaterialTheme(
             colorScheme = materialColors,
@@ -61,8 +61,8 @@ object BluebirdTheme {
         @Composable @ReadOnlyComposable get() = LocalBluebirdMotion.current
     val layout: BluebirdLayout
         @Composable @ReadOnlyComposable get() = LocalBluebirdLayout.current
-    val frostSettings: FrostSettings
-        @Composable @ReadOnlyComposable get() = LocalFrostSettings.current
+    val glassSettings: GlassSettings
+        @Composable @ReadOnlyComposable get() = LocalGlassSettings.current
 }
 
 private fun BluebirdColors.toMaterial(): ColorScheme {
@@ -93,7 +93,7 @@ private fun BluebirdColors.toMaterial(): ColorScheme {
         outline = outline,
         outlineVariant = separator,
         error = danger,
-        onError = if (isDark) Palette.Abyss950 else Palette.Glacier0,
+        onError = if (isDark) Palette.Black else Palette.White,
         scrim = scrim,
     )
 }

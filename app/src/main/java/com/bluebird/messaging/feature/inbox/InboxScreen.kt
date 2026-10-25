@@ -1,6 +1,7 @@
 package com.bluebird.messaging.feature.inbox
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
@@ -39,15 +40,16 @@ fun InboxScreen(
             BluebirdIconButton(BluebirdIcons.People, "Contacts", onClick = onOpenContacts)
             BluebirdIconButton(BluebirdIcons.Settings, "Settings", onClick = onOpenSettings)
         },
-    ) {
+    ) { padding ->
         when {
-            state.isLoading -> LoadingState()
+            state.isLoading -> LoadingState(Modifier.padding(padding))
             state.conversations.isEmpty() -> EmptyState(
+                modifier = Modifier.padding(padding),
                 icon = BluebirdIcons.Bubble,
                 title = "No conversations yet",
                 message = "Start a conversation and it will appear here.",
             )
-            else -> LazyColumn(Modifier.fillMaxSize()) {
+            else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = padding) {
                 itemsIndexed(state.conversations, key = { _, c -> c.id }) { index, conversation ->
                     val participants = conversation.participants
                     ConversationRow(

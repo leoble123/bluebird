@@ -6,7 +6,7 @@ import androidx.compose.ui.graphics.Color
 /**
  * Raw palette. Screens never use these directly; they read semantic roles from [BluebirdColors].
  *
- * Identity: a confident cobalt, a warm apricot used sparingly, and cool glacier neutrals.
+ * Identity: a confident cobalt and a warm apricot used sparingly, over clean iOS-style neutrals.
  */
 internal object Palette {
     val Cobalt500 = Color(0xFF1F5FE0)
@@ -22,55 +22,33 @@ internal object Palette {
     val Apricot100 = Color(0xFFFDEBDD)
     val Apricot900 = Color(0xFF3A1A05)
 
-    // Glacier neutrals (light).
-    val Glacier0 = Color(0xFFFFFFFF)
-    val Glacier50 = Color(0xFFF3F6FA)
-    val Glacier100 = Color(0xFFE9EEF4)
-    val Glacier150 = Color(0xFFE4EAF2)
-    val Glacier200 = Color(0xFFD9E0E9)
-    val Glacier300 = Color(0xFFC5CFDB)
-    val Slate400 = Color(0xFF8C97A8)
-    val Slate600 = Color(0xFF5A6678)
-    val Ink900 = Color(0xFF0E1726)
+    // Light neutrals.
+    val White = Color(0xFFFFFFFF)
+    val Gray50 = Color(0xFFF2F2F7)
+    val Gray100 = Color(0xFFE9E9EB)
+    val Gray150 = Color(0xFFE5E5EA)
+    val Gray200 = Color(0xFFD8D8DC)
+    val Gray300 = Color(0xFFC7C7CC)
+    val Gray500 = Color(0xFFA1A1A6)
+    val Gray600 = Color(0xFF6E6E73)
+    val Ink = Color(0xFF0B0B0C)
 
-    // Abyssal neutrals (dark).
-    val Abyss950 = Color(0xFF070B12)
-    val Abyss900 = Color(0xFF0B1119)
-    val Abyss850 = Color(0xFF0F1620)
-    val Abyss800 = Color(0xFF16202C)
-    val Abyss750 = Color(0xFF1A2431)
-    val Abyss700 = Color(0xFF1F2A38)
-    val Abyss600 = Color(0xFF2A3747)
-    val Mist500 = Color(0xFF6B788A)
-    val Mist300 = Color(0xFF9AA7B8)
-    val Frost50 = Color(0xFFE8EEF6)
+    // Dark neutrals.
+    val Black = Color(0xFF000000)
+    val Graphite900 = Color(0xFF111113)
+    val Graphite800 = Color(0xFF1C1C1E)
+    val Graphite750 = Color(0xFF26252A)
+    val Graphite700 = Color(0xFF2C2C2E)
+    val Graphite600 = Color(0xFF38383A)
+    val Graphite500 = Color(0xFF48484A)
+    val Graphite400 = Color(0xFF636366)
+    val Graphite300 = Color(0xFF98989F)
 
     val Green500 = Color(0xFF1E9E5A)
     val Green400 = Color(0xFF34C17A)
     val Red500 = Color(0xFFE0453A)
     val Red400 = Color(0xFFFF6B5E)
 }
-
-@Immutable
-data class FrostColors(
-    /** Top and bottom of the translucent ice fill. Alpha is intentionally high: hazy, never see-through. */
-    val tintTop: Color,
-    val tintBottom: Color,
-    /** Same fill, tinted toward the accent, for selected states. */
-    val accentTintTop: Color,
-    val accentTintBottom: Color,
-    /** Soft diffuse glow near the top edge. */
-    val highlight: Color,
-    /** Faint diagonal light streaks ("refraction"). */
-    val band: Color,
-    /** Edge light along the top of the rim. */
-    val rim: Color,
-    /** Darker hairline along the bottom of the rim, for depth. */
-    val rimShadow: Color,
-    /** Opaque stand-in used when frost is turned off. */
-    val solidFallback: Color,
-    val grainAlpha: Float,
-)
 
 @Immutable
 data class BluebirdColors(
@@ -90,8 +68,11 @@ data class BluebirdColors(
     val warmMuted: Color,
 
     val background: Color,
+    /** Behind grouped cards (settings, contact details). */
+    val groupedBackground: Color,
     val surface: Color,
     val surfaceRaised: Color,
+    /** Filled controls: search field, secondary buttons, empty-state discs. */
     val surfaceSunken: Color,
 
     val textPrimary: Color,
@@ -117,12 +98,10 @@ data class BluebirdColors(
     val skeleton: Color,
     val scrim: Color,
 
-    /** Screen backdrop: a static vertical gradient, like light from above the ice. */
-    val backdropTop: Color,
-    val backdropBottom: Color,
-    val backdropGlow: Color,
-
-    val frost: FrostColors,
+    /** Base tint laid over the blurred backdrop; [GlassMaterial] sets its opacity. */
+    val glassTint: Color,
+    /** What glass surfaces show when blur isn't available (Android 11 and below, or turned off). */
+    val glassFallback: Color,
 )
 
 val LightBluebirdColors = BluebirdColors(
@@ -136,42 +115,30 @@ val LightBluebirdColors = BluebirdColors(
     onWarm = Palette.Apricot900,
     warmStrong = Palette.Apricot700,
     warmMuted = Palette.Apricot100,
-    background = Palette.Glacier50,
-    surface = Palette.Glacier50,
-    surfaceRaised = Palette.Glacier0,
-    surfaceSunken = Palette.Glacier100,
-    textPrimary = Palette.Ink900,
-    textSecondary = Palette.Slate600,
-    textTertiary = Palette.Slate400,
-    separator = Palette.Glacier200,
-    outline = Palette.Glacier300,
+    background = Palette.White,
+    groupedBackground = Palette.Gray50,
+    surface = Palette.White,
+    surfaceRaised = Palette.White,
+    surfaceSunken = Palette.Gray50,
+    textPrimary = Palette.Ink,
+    textSecondary = Palette.Gray600,
+    textTertiary = Palette.Gray500,
+    separator = Palette.Gray200,
+    outline = Palette.Gray300,
     bubbleOutgoing = Palette.Cobalt500,
     onBubbleOutgoing = Color.White,
     onBubbleOutgoingSecondary = Color.White.copy(alpha = 0.72f),
-    bubbleIncoming = Palette.Glacier150,
-    onBubbleIncoming = Palette.Ink900,
+    bubbleIncoming = Palette.Gray100,
+    onBubbleIncoming = Palette.Ink,
     unread = Palette.Cobalt500,
     success = Palette.Green500,
     danger = Palette.Red500,
     callAccept = Palette.Green500,
     callDecline = Palette.Red500,
-    skeleton = Palette.Glacier150,
-    scrim = Color(0x660E1726),
-    backdropTop = Color(0xFFF8FBFE),
-    backdropBottom = Color(0xFFEAF0F7),
-    backdropGlow = Color(0x141F5FE0),
-    frost = FrostColors(
-        tintTop = Color(0xF5F6F9FD),
-        tintBottom = Color(0xF2E8EFF8),
-        accentTintTop = Color(0xF5EEF4FE),
-        accentTintBottom = Color(0xF2DCE7FB),
-        highlight = Color(0xB3FFFFFF),
-        band = Color(0x4DFFFFFF),
-        rim = Color(0xF2FFFFFF),
-        rimShadow = Color(0x26305A8C),
-        solidFallback = Palette.Glacier0,
-        grainAlpha = 0.035f,
-    ),
+    skeleton = Palette.Gray150,
+    scrim = Color(0x66000000),
+    glassTint = Color(0xFFF9F9F9),
+    glassFallback = Color(0xF2F9F9F9),
 )
 
 val DarkBluebirdColors = BluebirdColors(
@@ -185,41 +152,29 @@ val DarkBluebirdColors = BluebirdColors(
     onWarm = Palette.Apricot900,
     warmStrong = Palette.Apricot300,
     warmMuted = Color(0xFF3A2416),
-    background = Palette.Abyss950,
-    surface = Palette.Abyss850,
-    surfaceRaised = Palette.Abyss800,
-    surfaceSunken = Palette.Abyss900,
-    textPrimary = Palette.Frost50,
-    textSecondary = Palette.Mist300,
-    textTertiary = Palette.Mist500,
-    separator = Palette.Abyss700,
-    outline = Palette.Abyss600,
+    background = Palette.Black,
+    groupedBackground = Palette.Black,
+    surface = Palette.Black,
+    surfaceRaised = Palette.Graphite800,
+    surfaceSunken = Palette.Graphite800,
+    textPrimary = Color.White,
+    textSecondary = Palette.Graphite300,
+    textTertiary = Palette.Graphite400,
+    separator = Palette.Graphite600,
+    outline = Palette.Graphite500,
     // Slightly deeper than the dark-mode accent so white text keeps comfortable contrast.
     bubbleOutgoing = Color(0xFF2F6BF0),
     onBubbleOutgoing = Color.White,
     onBubbleOutgoingSecondary = Color.White.copy(alpha = 0.7f),
-    bubbleIncoming = Palette.Abyss750,
-    onBubbleIncoming = Palette.Frost50,
+    bubbleIncoming = Palette.Graphite750,
+    onBubbleIncoming = Color.White,
     unread = Palette.Cobalt300,
     success = Palette.Green400,
     danger = Palette.Red400,
     callAccept = Palette.Green400,
     callDecline = Palette.Red400,
-    skeleton = Palette.Abyss750,
+    skeleton = Palette.Graphite800,
     scrim = Color(0x99000000),
-    backdropTop = Color(0xFF0C1420),
-    backdropBottom = Palette.Abyss950,
-    backdropGlow = Color(0x1A6E9BFF),
-    frost = FrostColors(
-        tintTop = Color(0xF21A2635),
-        tintBottom = Color(0xF5101925),
-        accentTintTop = Color(0xF21C2D4C),
-        accentTintBottom = Color(0xF5132139),
-        highlight = Color(0x2EB9D8FF),
-        band = Color(0x12CFE6FF),
-        rim = Color(0x59A9CCFF),
-        rimShadow = Color(0x80000000),
-        solidFallback = Palette.Abyss800,
-        grainAlpha = 0.05f,
-    ),
+    glassTint = Palette.Graphite800,
+    glassFallback = Color(0xF21C1C1E),
 )

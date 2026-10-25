@@ -15,16 +15,16 @@ import com.bluebird.messaging.core.designsystem.catalog.BubbleSample
 import com.bluebird.messaging.core.designsystem.catalog.ButtonSample
 import com.bluebird.messaging.core.designsystem.catalog.CatalogSection
 import com.bluebird.messaging.core.designsystem.catalog.ColorSample
-import com.bluebird.messaging.core.designsystem.catalog.FrostSample
+import com.bluebird.messaging.core.designsystem.catalog.GlassSample
 import com.bluebird.messaging.core.designsystem.catalog.InputSample
 import com.bluebird.messaging.core.designsystem.catalog.RowSample
 import com.bluebird.messaging.core.designsystem.catalog.StateSample
 import com.bluebird.messaging.core.designsystem.catalog.TypeSample
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
-import com.bluebird.messaging.core.designsystem.theme.icyBackdrop
 import com.bluebird.messaging.core.provider.MockMessagingProvider
 import com.bluebird.messaging.feature.inbox.InboxScreen
 import com.bluebird.messaging.feature.inbox.InboxViewModel
+import com.bluebird.messaging.feature.settings.SettingsScreen
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
 import org.junit.Test
@@ -49,7 +49,7 @@ class DesignSystemScreenshotTest {
         compose.mainClock.autoAdvance = false
         compose.setContent {
             BluebirdTheme(darkTheme = dark) {
-                Box(Modifier.fillMaxSize().background(BluebirdTheme.colors.background).icyBackdrop()) {
+                Box(Modifier.fillMaxSize().background(BluebirdTheme.colors.background)) {
                     Column(Modifier.padding(top = 12.dp)) { content() }
                 }
             }
@@ -58,8 +58,8 @@ class DesignSystemScreenshotTest {
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/${name}_${if (dark) "dark" else "light"}.png")
     }
 
-    @Test fun frostLight() = snap("frost", dark = false) { CatalogSection("Frost") { FrostSample() } }
-    @Test fun frostDark() = snap("frost", dark = true) { CatalogSection("Frost") { FrostSample() } }
+    @Test fun glassLight() = snap("glass", dark = false) { CatalogSection("Glass") { GlassSample() } }
+    @Test fun glassDark() = snap("glass", dark = true) { CatalogSection("Glass") { GlassSample() } }
 
     @Test fun foundationsLight() = snap("foundations", dark = false) { Foundations() }
     @Test fun foundationsDark() = snap("foundations", dark = true) { Foundations() }
@@ -72,6 +72,9 @@ class DesignSystemScreenshotTest {
 
     @Test fun inboxLight() = snap("inbox", dark = false) { Inbox() }
     @Test fun inboxDark() = snap("inbox", dark = true) { Inbox() }
+
+    @Test fun settingsLight() = snap("settings", dark = false) { SettingsScreen("Mock (simulated)", onOpenDesignCatalog = {}, onBack = {}) }
+    @Test fun settingsDark() = snap("settings", dark = true) { SettingsScreen("Mock (simulated)", onOpenDesignCatalog = {}, onBack = {}) }
 
     @Config(qualifiers = "w1280dp-h800dp-xhdpi")
     @Test fun tabletRows() = snap("tablet_rows", dark = false) { CatalogSection("Rows at tablet width") { RowSample() } }

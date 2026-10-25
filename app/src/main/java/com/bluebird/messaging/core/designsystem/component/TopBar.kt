@@ -14,6 +14,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -21,28 +23,29 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bluebird.messaging.core.designsystem.icon.BluebirdIcons
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
-import com.bluebird.messaging.core.designsystem.theme.frost
+import com.bluebird.messaging.core.designsystem.theme.glass
 
 /**
- * Screen header. [large] shows an iOS-style large title under the bar. [frosted] turns the bar into a frost
- * surface, used once content scrolls beneath it so the title stays legible without a hard divider.
+ * Screen header. [large] shows an iOS-style large title under the bar. [glass] turns the bar into frosted glass
+ * with a hairline underneath, for when content scrolls beneath it (place the bar over a [glassSource]).
  */
 @Composable
 fun BluebirdTopBar(
     title: String,
     modifier: Modifier = Modifier,
     large: Boolean = false,
-    frosted: Boolean = false,
+    glass: Boolean = false,
     subtitle: String? = null,
     navigation: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val typography = BluebirdTheme.typography
     val colors = BluebirdTheme.colors
+    val separator = colors.separator
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (frosted) Modifier.frost() else Modifier)
+            .then(if (glass) Modifier.glass().drawBehind { drawLine(separator, Offset(0f, size.height), Offset(size.width, size.height), strokeWidth = 1f) } else Modifier)
             .windowInsetsPadding(WindowInsets.statusBars),
     ) {
         Box(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp)) {

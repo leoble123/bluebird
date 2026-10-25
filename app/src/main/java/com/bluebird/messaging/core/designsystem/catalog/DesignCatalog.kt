@@ -1,6 +1,7 @@
 package com.bluebird.messaging.core.designsystem.catalog
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,9 +48,9 @@ import com.bluebird.messaging.core.designsystem.component.ConversationRowDivider
 import com.bluebird.messaging.core.designsystem.component.DeliveryStatus
 import com.bluebird.messaging.core.designsystem.component.EmptyState
 import com.bluebird.messaging.core.designsystem.component.ErrorState
-import com.bluebird.messaging.core.designsystem.component.FrostMenuDivider
-import com.bluebird.messaging.core.designsystem.component.FrostMenuItem
-import com.bluebird.messaging.core.designsystem.component.FrostMenuSurface
+import com.bluebird.messaging.core.designsystem.component.MenuDivider
+import com.bluebird.messaging.core.designsystem.component.MenuItem
+import com.bluebird.messaging.core.designsystem.component.MenuSurface
 import com.bluebird.messaging.core.designsystem.component.GroupAvatar
 import com.bluebird.messaging.core.designsystem.component.IconBadge
 import com.bluebird.messaging.core.designsystem.component.IconButtonStyle
@@ -62,11 +63,11 @@ import com.bluebird.messaging.core.designsystem.component.TypingIndicator
 import com.bluebird.messaging.core.designsystem.icon.BluebirdIcons
 import com.bluebird.messaging.core.designsystem.theme.AvatarSize
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
-import com.bluebird.messaging.core.designsystem.theme.FrostTone
 import com.bluebird.messaging.core.designsystem.theme.Radii
 import com.bluebird.messaging.core.designsystem.theme.Spacing
-import com.bluebird.messaging.core.designsystem.theme.frost
-import com.bluebird.messaging.core.designsystem.theme.icyBackdrop
+import com.bluebird.messaging.core.designsystem.theme.GlassHost
+import com.bluebird.messaging.core.designsystem.theme.glass
+import com.bluebird.messaging.core.designsystem.theme.glassSource
 import com.bluebird.messaging.core.model.DeliveryState
 
 /**
@@ -77,25 +78,27 @@ import com.bluebird.messaging.core.model.DeliveryState
 fun DesignCatalogScreen(onBack: () -> Unit) {
     val listState = rememberLazyListState()
     val scrolled by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0 } }
-    Box(Modifier.fillMaxSize().icyBackdrop()) {
-        LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-            item { Spacer(Modifier.height(140.dp)) }
-            item { CatalogSection("Frost") { FrostSample() } }
-            item { CatalogSection("Color") { ColorSample() } }
-            item { CatalogSection("Type") { TypeSample() } }
-            item { CatalogSection("Buttons") { ButtonSample() } }
-            item { CatalogSection("Conversation rows") { RowSample() } }
-            item { CatalogSection("Messages") { BubbleSample() } }
-            item { CatalogSection("Inputs") { InputSample() } }
-            item { CatalogSection("States") { StateSample() } }
-            item { Spacer(Modifier.height(48.dp)) }
+    GlassHost {
+        Box(Modifier.fillMaxSize().background(BluebirdTheme.colors.background)) {
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize().glassSource()) {
+                item { Spacer(Modifier.height(140.dp)) }
+                item { CatalogSection("Glass") { GlassSample() } }
+                item { CatalogSection("Color") { ColorSample() } }
+                item { CatalogSection("Type") { TypeSample() } }
+                item { CatalogSection("Buttons") { ButtonSample() } }
+                item { CatalogSection("Conversation rows") { RowSample() } }
+                item { CatalogSection("Messages") { BubbleSample() } }
+                item { CatalogSection("Inputs") { InputSample() } }
+                item { CatalogSection("States") { StateSample() } }
+                item { Spacer(Modifier.height(48.dp)) }
+            }
+            BluebirdTopBar(
+                title = "Design system",
+                large = !scrolled,
+                glass = scrolled,
+                navigation = { BackButton(onBack) },
+            )
         }
-        BluebirdTopBar(
-            title = "Design system",
-            large = !scrolled,
-            frosted = scrolled,
-            navigation = { BackButton(onBack) },
-        )
     }
 }
 
@@ -107,51 +110,44 @@ fun CatalogSection(title: String, content: @Composable () -> Unit) {
     }
 }
 
-/** Frost over deliberately busy content, to show the haze, rim light, and refraction bands. */
+/** Frosted glass over colorful content: a bar and a menu blurring what sits behind them. */
 @Composable
-fun FrostSample() {
+fun GlassSample() {
     val colors = BluebirdTheme.colors
-    Box(
-        Modifier
-            .padding(horizontal = 16.dp)
-            .fillMaxWidth()
-            .height(260.dp)
-            .clip(Radii.card)
-            .icyBackdrop(),
-    ) {
-        // Busy content underneath.
-        Box(Modifier.offset(24.dp, 20.dp).size(110.dp).clip(CircleShape).background(colors.accent))
-        Box(Modifier.offset(200.dp, 120.dp).size(90.dp).clip(CircleShape).background(colors.warm))
-        Text(
-            "Light passing through ice ".repeat(12),
-            style = BluebirdTheme.typography.title3,
-            color = colors.textSecondary,
-            modifier = Modifier.padding(12.dp),
-        )
-        Column(Modifier.align(Alignment.Center).padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    GlassHost {
+        Box(
+            Modifier
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth()
+                .height(300.dp)
+                .clip(Radii.card)
+                .background(colors.surfaceSunken),
+        ) {
+            // Colorful content underneath, standing in for photos and bubbles scrolling by.
+            Box(Modifier.fillMaxSize().glassSource()) {
+                Box(Modifier.offset(20.dp, 10.dp).size(120.dp).clip(CircleShape).background(colors.accent))
+                Box(Modifier.offset(170.dp, 30.dp).size(100.dp).clip(CircleShape).background(colors.warm))
+                Box(Modifier.offset(90.dp, 150.dp).size(140.dp).clip(CircleShape).background(colors.success))
+                Text(
+                    "Messages scroll beneath glass ".repeat(10),
+                    style = BluebirdTheme.typography.title3,
+                    color = colors.textPrimary,
+                    modifier = Modifier.padding(12.dp),
+                )
+            }
             Row(
-                Modifier.fillMaxWidth().frost(RoundedCornerShape(Radii.lg)).padding(16.dp),
+                Modifier.fillMaxWidth().height(56.dp).glass().padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Frost surface", style = BluebirdTheme.typography.headline, color = colors.textPrimary, modifier = Modifier.weight(1f))
+                Text("Glass bar", style = BluebirdTheme.typography.headline, color = colors.textPrimary, modifier = Modifier.weight(1f))
                 StatusPill("Simulated")
             }
-            Row(
-                Modifier.fillMaxWidth().frost(RoundedCornerShape(Radii.lg), FrostTone.Accent).padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Selected (accent frost)", style = BluebirdTheme.typography.headline, color = colors.accent)
+            MenuSurface(Modifier.align(Alignment.BottomEnd).padding(12.dp)) {
+                MenuItem("Reply", onClick = {}, icon = BluebirdIcons.Reply)
+                MenuItem("Copy", onClick = {}, icon = BluebirdIcons.Copy)
+                MenuDivider()
+                MenuItem("Delete", onClick = {}, icon = BluebirdIcons.Trash, destructive = true)
             }
-        }
-    }
-    Spacer(Modifier.height(12.dp))
-    Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        FrostMenuSurface {
-            FrostMenuItem("Reply", onClick = {}, icon = BluebirdIcons.Reply)
-            FrostMenuItem("Copy", onClick = {}, icon = BluebirdIcons.Copy)
-            FrostMenuItem("Pin", onClick = {}, icon = BluebirdIcons.Pin)
-            FrostMenuDivider()
-            FrostMenuItem("Delete", onClick = {}, icon = BluebirdIcons.Trash, destructive = true)
         }
     }
 }
@@ -174,7 +170,7 @@ fun ColorSample() {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     Modifier.size(56.dp).clip(RoundedCornerShape(14.dp)).background(color)
-                        .then(if (color.alpha < 1f || color == c.background) Modifier.frost(RoundedCornerShape(14.dp)) else Modifier),
+                        .then(if (color == c.background || color == c.surfaceRaised) Modifier.border(1.dp, c.separator, RoundedCornerShape(14.dp)) else Modifier),
                 )
                 Text(name, style = BluebirdTheme.typography.caption2, color = c.textSecondary, modifier = Modifier.padding(top = 4.dp))
             }
@@ -205,14 +201,14 @@ fun ButtonSample() {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             BluebirdButton("New message", onClick = {}, leadingIcon = BluebirdIcons.Compose)
             BluebirdButton("Tonal", onClick = {}, variant = ButtonVariant.Tonal)
-            BluebirdButton("Frost", onClick = {}, variant = ButtonVariant.Frost)
+            BluebirdButton("Secondary", onClick = {}, variant = ButtonVariant.Secondary)
             BluebirdButton("Plain", onClick = {}, variant = ButtonVariant.Plain)
             BluebirdButton("Delete", onClick = {}, variant = ButtonVariant.Destructive)
             BluebirdButton("Disabled", onClick = {}, enabled = false)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             BluebirdIconButton(BluebirdIcons.Compose, "New message", onClick = {})
-            BluebirdIconButton(BluebirdIcons.Search, "Search", onClick = {}, style = IconButtonStyle.Frost)
+            BluebirdIconButton(BluebirdIcons.Search, "Search", onClick = {}, style = IconButtonStyle.Gray)
             BluebirdIconButton(BluebirdIcons.Plus, "Add", onClick = {}, style = IconButtonStyle.Tonal)
             BluebirdIconButton(BluebirdIcons.Send, "Send", onClick = {}, style = IconButtonStyle.Filled)
             BluebirdIconButton(BluebirdIcons.Phone, "Call (future)", onClick = {}, enabled = false)
@@ -223,7 +219,7 @@ fun ButtonSample() {
             IconBadge(BluebirdIcons.Bell, colors.danger)
             IconBadge(BluebirdIcons.Lock, Color(0xFF627790))
             IconBadge(BluebirdIcons.Bubble, colors.success)
-            IconBadge(BluebirdIcons.Glint, colors.warm)
+            IconBadge(BluebirdIcons.Sparkle, colors.warm)
         }
     }
 }

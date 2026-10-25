@@ -1,6 +1,7 @@
 package com.bluebird.messaging.core.designsystem.component
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -32,8 +33,6 @@ import androidx.compose.ui.unit.dp
 import com.bluebird.messaging.core.designsystem.icon.BluebirdIcons
 import com.bluebird.messaging.core.designsystem.theme.AvatarSize
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
-import com.bluebird.messaging.core.designsystem.theme.FrostTone
-import com.bluebird.messaging.core.designsystem.theme.frost
 
 private val UnreadDotSize = 9.dp
 private val UnreadGutter = 14.dp
@@ -44,7 +43,7 @@ val ConversationRowDividerInset: Dp = UnreadGutter + RowAvatarSize + 12.dp
 
 /**
  * One inbox row. Purely presentational: all text is pre-formatted by the caller so rows stay cheap to compose
- * while scrolling. [selected] gives the accent-tinted frost used for the open conversation on tablets.
+ * while scrolling. [selected] highlights the open conversation on tablets.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -81,7 +80,8 @@ fun ConversationRow(
                 Modifier
                     .matchParentSize()
                     .padding(horizontal = 6.dp, vertical = 2.dp)
-                    .frost(RoundedCornerShape(16.dp), FrostTone.Accent),
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(colors.accentMuted),
             )
         }
         Row(

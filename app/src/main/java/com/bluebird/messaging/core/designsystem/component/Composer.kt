@@ -32,6 +32,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
@@ -40,14 +42,14 @@ import androidx.compose.ui.unit.dp
 import com.bluebird.messaging.core.designsystem.icon.BluebirdIcons
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
 import com.bluebird.messaging.core.designsystem.theme.Radii
-import com.bluebird.messaging.core.designsystem.theme.frost
+import com.bluebird.messaging.core.designsystem.theme.glass
 
 private val FieldMinHeight: Dp = 40.dp
 
 /**
- * The message composer: a frost bar holding an attachment button, a multiline field, and the send button.
+ * The message composer: a frosted-glass bar holding an attachment button, a multiline field, and the send button.
  *
- * It applies the keyboard and navigation-bar insets itself, so the frost extends to the bottom edge while the
+ * It applies the keyboard and navigation-bar insets itself, so the glass extends to the bottom edge while the
  * field rides above the keyboard; screens should not add imePadding around it. Typing goes through
  * [TextFieldState], so keystrokes never recompose the surrounding screen.
  */
@@ -65,11 +67,13 @@ fun BluebirdComposer(
     val typography = BluebirdTheme.typography
     val canSend by remember(state) { derivedStateOf { state.text.isNotBlank() } }
     val isEmpty by remember(state) { derivedStateOf { state.text.isEmpty() } }
+    val separator = colors.separator
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .frost()
+            .glass()
+            .drawBehind { drawLine(separator, Offset.Zero, Offset(size.width, 0f), strokeWidth = 1f) }
             .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
             .padding(horizontal = 6.dp, vertical = 6.dp),
         verticalAlignment = Alignment.Bottom,
@@ -160,7 +164,7 @@ private fun SendButton(enabled: Boolean, onClick: () -> Unit) {
     }
 }
 
-/** Frosted search pill with a clear button. */
+/** iOS-style filled search pill with a clear button. */
 @Composable
 fun BluebirdSearchField(
     state: TextFieldState,
@@ -174,7 +178,8 @@ fun BluebirdSearchField(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 40.dp)
-            .frost(Radii.pill)
+            .clip(Radii.pill)
+            .background(colors.surfaceSunken)
             .padding(start = 12.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

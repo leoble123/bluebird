@@ -61,6 +61,10 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.coroutines.android)
 
+    // Backdrop blur for iOS-style frosted glass bars (GPU blur on Android 12+, translucent fallback below).
+    implementation(libs.haze)
+    implementation(libs.haze.blur)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 

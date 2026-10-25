@@ -29,8 +29,13 @@ import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
 fun SettingsScreen(providerName: String, onOpenDesignCatalog: () -> Unit, onBack: () -> Unit) {
     val colors = BluebirdTheme.colors
     val typography = BluebirdTheme.typography
-    PlaceholderScaffold(title = "Settings", large = true, onBack = onBack) {
-        Column(Modifier.padding(16.dp)) {
+    PlaceholderScaffold(
+        title = "Settings",
+        large = true,
+        onBack = onBack,
+        containerColor = colors.groupedBackground,
+    ) { padding ->
+        Column(Modifier.padding(padding).padding(16.dp)) {
             SectionHeader("Connection")
             BluebirdCard(Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -49,7 +54,7 @@ fun SettingsScreen(providerName: String, onOpenDesignCatalog: () -> Unit, onBack
                     Modifier.fillMaxWidth().clickable(onClick = onOpenDesignCatalog).padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconBadge(BluebirdIcons.Glint, colors.accent)
+                    IconBadge(BluebirdIcons.Sparkle, colors.accent)
                     Spacer(Modifier.width(12.dp))
                     Text("Design system", style = typography.body, color = colors.textPrimary, modifier = Modifier.weight(1f))
                     Icon(BluebirdIcons.ChevronRight, contentDescription = null, tint = colors.textTertiary, modifier = Modifier.size(18.dp))

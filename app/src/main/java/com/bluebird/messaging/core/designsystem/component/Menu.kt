@@ -24,6 +24,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
@@ -32,14 +34,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
+import com.bluebird.messaging.core.designsystem.theme.GlassMaterial
 import com.bluebird.messaging.core.designsystem.theme.Radii
-import com.bluebird.messaging.core.designsystem.theme.frost
+import com.bluebird.messaging.core.designsystem.theme.glass
 
 /**
- * A frosted popover menu anchored to its parent. Opens with a short scale-and-fade from [transformOrigin].
+ * A frosted-glass popover menu anchored to its parent. Opens with a short scale-and-fade from [transformOrigin].
  */
 @Composable
-fun FrostMenu(
+fun BluebirdMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
@@ -64,26 +67,27 @@ fun FrostMenu(
             enter = fadeIn(motion.fade(120)) + scaleIn(motion.snappy(), initialScale = 0.9f, transformOrigin = transformOrigin),
             exit = fadeOut(motion.fade(100)) + scaleOut(motion.fade(100), targetScale = 0.95f, transformOrigin = transformOrigin),
         ) {
-            FrostMenuSurface(modifier, content)
+            MenuSurface(modifier, content)
         }
     }
 }
 
-/** The menu's frosted panel on its own, for inline use and previews. */
+/** The menu's glass panel on its own, for inline use and previews. */
 @Composable
-fun FrostMenuSurface(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+fun MenuSurface(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier = modifier
             .width(IntrinsicSize.Max)
             .widthIn(min = 220.dp, max = 300.dp)
-            .frost(Radii.menu)
+            .shadow(18.dp, Radii.menu, ambientColor = Color.Black.copy(alpha = 0.12f), spotColor = Color.Black.copy(alpha = 0.18f))
+            .glass(Radii.menu, GlassMaterial.Thick)
             .padding(vertical = 6.dp),
         content = content,
     )
 }
 
 @Composable
-fun FrostMenuItem(
+fun MenuItem(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -109,6 +113,6 @@ fun FrostMenuItem(
 }
 
 @Composable
-fun FrostMenuDivider() {
+fun MenuDivider() {
     BluebirdDivider(Modifier.padding(vertical = 4.dp))
 }

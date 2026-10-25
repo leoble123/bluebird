@@ -27,19 +27,17 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
-import com.bluebird.messaging.core.designsystem.theme.FrostTone
 import com.bluebird.messaging.core.designsystem.theme.IconSize
 import com.bluebird.messaging.core.designsystem.theme.MinTouchTarget
 import com.bluebird.messaging.core.designsystem.theme.Radii
-import com.bluebird.messaging.core.designsystem.theme.frost
 
 enum class ButtonVariant {
     /** Solid cobalt. One per screen, for the main action. */
     Primary,
     /** Soft cobalt tint. Secondary actions that still deserve emphasis. */
     Tonal,
-    /** Frosted. Actions floating over content. */
-    Frost,
+    /** Neutral gray fill, like iOS's gray buttons. */
+    Secondary,
     /** Text only. */
     Plain,
     Destructive,
@@ -61,14 +59,11 @@ fun BluebirdButton(
     val (container, content) = when (variant) {
         ButtonVariant.Primary -> colors.accent to colors.onAccent
         ButtonVariant.Tonal -> colors.accentMuted to colors.onAccentMuted
-        ButtonVariant.Frost -> Color.Transparent to colors.accent
+        ButtonVariant.Secondary -> colors.surfaceSunken to colors.accent
         ButtonVariant.Plain -> Color.Transparent to colors.accent
         ButtonVariant.Destructive -> colors.danger.copy(alpha = 0.12f) to colors.danger
     }
-    val surface = when (variant) {
-        ButtonVariant.Frost -> Modifier.frost(Radii.pill, FrostTone.Neutral)
-        else -> Modifier.clip(Radii.pill).background(container)
-    }
+    val surface = Modifier.clip(Radii.pill).background(container)
     Row(
         modifier = modifier
             .defaultMinSize(minHeight = MinTouchTarget)
@@ -94,7 +89,7 @@ fun BluebirdButton(
     }
 }
 
-enum class IconButtonStyle { Plain, Frost, Filled, Tonal }
+enum class IconButtonStyle { Plain, Gray, Filled, Tonal }
 
 /**
  * Icon-only action. The visible container stays compact while the touch target is always at least 48dp.
@@ -119,7 +114,7 @@ fun BluebirdIconButton(
     }
     val container = when (style) {
         IconButtonStyle.Plain -> Modifier
-        IconButtonStyle.Frost -> Modifier.frost(CircleShape)
+        IconButtonStyle.Gray -> Modifier.clip(CircleShape).background(colors.surfaceSunken)
         IconButtonStyle.Filled -> Modifier.clip(CircleShape).background(colors.accent)
         IconButtonStyle.Tonal -> Modifier.clip(CircleShape).background(colors.accentMuted)
     }
