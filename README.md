@@ -174,6 +174,16 @@ On macOS, if Android Studio is installed, the SDK is usually at `~/Library/Andro
 
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
+**For trying the app on a phone, use the `preview` build.** Debug builds are unoptimized and run Compose much more
+slowly, so they misrepresent smoothness. `preview` is optimized exactly like a release build (R8, not debuggable,
+with the libraries' baseline profiles) but signed with the local debug key so it installs the same way:
+
+```powershell
+.gradlew.bat assemblePreview    # app/build/outputs/apk/preview/app-preview.apk
+```
+
+It is not for distribution; real release signing will be set up separately.
+
 ## Installing on a device
 
 1. On the phone or tablet, enable **Developer options** (tap *Build number* 7 times in *About phone*), then turn on

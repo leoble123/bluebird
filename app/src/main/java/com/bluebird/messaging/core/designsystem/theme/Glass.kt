@@ -1,17 +1,9 @@
 package com.bluebird.messaging.core.designsystem.theme
 
-import dev.chrisbanes.haze.ExperimentalHazeApi
-import dev.chrisbanes.haze.glass.GlassStyle
-import dev.chrisbanes.haze.glass.hazeGlass
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.graphics.isSpecified
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.interaction.InteractionSource
-import androidx.compose.foundation.border
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -19,14 +11,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import dev.chrisbanes.haze.ExperimentalHazeApi
 import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.HazePerformanceMode
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.HazeColorEffect
 import dev.chrisbanes.haze.blur.hazeBlur
+import dev.chrisbanes.haze.glass.GlassStyle
+import dev.chrisbanes.haze.glass.hazeGlass
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 
@@ -95,20 +95,21 @@ fun Modifier.glass(
             fallbackColorEffect(HazeColorEffect.tint(colors.glassFallback))
         }
     }
-    return clipped.hazeBlur(input = HazeInput.Sources(state), style = style)
+    return clipped.hazeBlur(input = HazeInput.Sources(state), style = style, performanceMode = HazePerformanceMode.Performance)
 }
 
 /**
  * Liquid Glass for small floating controls (round buttons, capsules): the backdrop is refracted and lit with a
- * specular rim, and the material responds to presses, following Apple's guidance to use it only for the
- * controls and navigation layer. GPU shaders on Android 13+, Haze's simpler fallback below that, and a plain
+ * soft specular rim, following Apple's guidance to use it only for the controls and navigation layer.
+ *
+ * Tuned for smoothness: lower-cost sampling ([HazePerformanceMode.Performance]), a gentler highlight, and no
+ * touch-tracking light (it produced moving glare); components add their own press feedback instead. GPU shaders on Android 13+, Haze's simpler fallback below that, and a plain
  * translucent fill outside a [GlassHost] or with [GlassSettings.blur] off.
  */
 @OptIn(ExperimentalHazeApi::class)
 @Composable
 fun Modifier.liquidGlass(
     shape: RoundedCornerShape = CircleShape,
-    interactionSource: InteractionSource? = null,
     /** Tints the glass, e.g. the accent for a prominent action. */
     tint: Color = Color.Unspecified,
 ): Modifier {
@@ -125,9 +126,14 @@ fun Modifier.liquidGlass(
             shape(shape)
             backgroundColor(colors.background)
             tint(glassTint)
+            specularIntensity(0.22f)
         }
     }
-    return hazeGlass(input = HazeInput.Sources(state), style = style, interactionSource = interactionSource)
+    return hazeGlass(
+        input = HazeInput.Sources(state),
+        style = style,
+        performanceMode = HazePerformanceMode.Performance,
+    )
 }
 
 enum class ScrollEdge { Top, Bottom }
@@ -163,5 +169,5 @@ fun Modifier.scrollEdgeEffect(
             fallbackColorEffect(HazeColorEffect.tint(solid.copy(alpha = 0.9f)))
         }
     }
-    return hazeBlur(input = HazeInput.Sources(state), style = style)
+    return hazeBlur(input = HazeInput.Sources(state), style = style, performanceMode = HazePerformanceMode.Performance)
 }

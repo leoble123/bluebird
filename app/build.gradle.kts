@@ -34,6 +34,13 @@ android {
                 "proguard-rules.pro",
             )
         }
+        // Optimized exactly like release, but signed with this computer's local debug key so it can be installed
+        // for real-world performance testing. Not for distribution: real release signing is set up separately.
+        create("preview") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
 
     compileOptions {
@@ -54,6 +61,8 @@ android {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    // Applies the baseline profiles Compose and other libraries ship, so sideloaded builds start and scroll faster.
+    implementation(libs.androidx.profileinstaller)
     implementation(libs.androidx.activity.compose)
 
     implementation(platform(libs.androidx.compose.bom))

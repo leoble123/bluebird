@@ -2,15 +2,8 @@ package com.bluebird.messaging.feature.conversation
 
 import android.content.ClipData
 import android.os.Build
-import com.bluebird.messaging.core.designsystem.component.GlassIconButton
-import com.bluebird.messaging.core.designsystem.component.GlassTextButton
-import com.bluebird.messaging.core.designsystem.theme.ScrollEdge
-import com.bluebird.messaging.core.designsystem.theme.scrollEdgeEffect
-import kotlinx.coroutines.flow.drop
-import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.animation.core.Animatable
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -27,6 +20,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,8 +36,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -54,6 +49,8 @@ import com.bluebird.messaging.core.designsystem.component.BluebirdTopBar
 import com.bluebird.messaging.core.designsystem.component.BubbleRow
 import com.bluebird.messaging.core.designsystem.component.ConversationTopBar
 import com.bluebird.messaging.core.designsystem.component.EmptyState
+import com.bluebird.messaging.core.designsystem.component.GlassIconButton
+import com.bluebird.messaging.core.designsystem.component.GlassTextButton
 import com.bluebird.messaging.core.designsystem.component.MenuItem
 import com.bluebird.messaging.core.designsystem.component.NoticePill
 import com.bluebird.messaging.core.designsystem.component.ReplyComposerHeader
@@ -63,10 +60,13 @@ import com.bluebird.messaging.core.designsystem.component.rememberAnchoredMenuPo
 import com.bluebird.messaging.core.designsystem.icon.BluebirdIcons
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
 import com.bluebird.messaging.core.designsystem.theme.GlassHost
+import com.bluebird.messaging.core.designsystem.theme.ScrollEdge
 import com.bluebird.messaging.core.designsystem.theme.glass
 import com.bluebird.messaging.core.designsystem.theme.glassSource
+import com.bluebird.messaging.core.designsystem.theme.scrollEdgeEffect
 import com.bluebird.messaging.feature.inbox.ConversationAvatar
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 @Composable

@@ -1,20 +1,8 @@
 package com.bluebird.messaging.core.designsystem.component
 
-import com.bluebird.messaging.core.designsystem.theme.Radii
-import com.bluebird.messaging.core.designsystem.theme.ScrollEdge
-import com.bluebird.messaging.core.designsystem.theme.liquidGlass
-import com.bluebird.messaging.core.designsystem.theme.scrollEdgeEffect
-import androidx.compose.ui.graphics.Color
-import androidx.compose.runtime.remember
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.draw.clip
-import androidx.compose.material3.Icon
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.clickable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,23 +11,35 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bluebird.messaging.core.designsystem.icon.BluebirdIcons
 import com.bluebird.messaging.core.designsystem.theme.BluebirdMotion
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
+import com.bluebird.messaging.core.designsystem.theme.Radii
+import com.bluebird.messaging.core.designsystem.theme.ScrollEdge
+import com.bluebird.messaging.core.designsystem.theme.liquidGlass
+import com.bluebird.messaging.core.designsystem.theme.scrollEdgeEffect
 
 /**
  * Screen header in the iOS 26 style: floating controls over the content, no solid bar. [large] shows a large title
@@ -197,7 +197,7 @@ fun ConversationTopBar(
             Row(
                 modifier = Modifier
                     .padding(top = 4.dp)
-                    .liquidGlass(RoundedCornerShape(percent = 50), interaction)
+                    .liquidGlass(RoundedCornerShape(percent = 50))
                     .padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

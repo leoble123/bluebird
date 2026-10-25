@@ -13,7 +13,12 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.bluebird.messaging.core.data.InMemoryDraftStore
+import com.bluebird.messaging.core.data.LocalMessageStore
+import com.bluebird.messaging.core.data.PreferencesRepository
+import com.bluebird.messaging.core.data.db.BluebirdDatabase
 import com.bluebird.messaging.core.designsystem.catalog.BubbleSample
 import com.bluebird.messaging.core.designsystem.catalog.ButtonSample
 import com.bluebird.messaging.core.designsystem.catalog.CatalogSection
@@ -24,12 +29,7 @@ import com.bluebird.messaging.core.designsystem.catalog.RowSample
 import com.bluebird.messaging.core.designsystem.catalog.StateSample
 import com.bluebird.messaging.core.designsystem.catalog.TypeSample
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
-import androidx.test.core.app.ApplicationProvider
-import com.bluebird.messaging.core.data.LocalMessageStore
-import com.bluebird.messaging.core.data.PreferencesRepository
-import com.bluebird.messaging.core.data.db.BluebirdDatabase
 import com.bluebird.messaging.core.provider.MockMessagingProvider
-import com.bluebird.messaging.core.data.InMemoryDraftStore
 import com.bluebird.messaging.feature.conversation.ConversationScreen
 import com.bluebird.messaging.feature.conversation.ConversationViewModel
 import com.bluebird.messaging.feature.inbox.InboxScreen

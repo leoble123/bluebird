@@ -59,7 +59,8 @@ fun GlassIconButton(
         modifier = modifier
             .size(size)
             .alpha(if (enabled) 1f else 0.4f)
-            .liquidGlass(CircleShape, interaction, tint = if (prominent) colors.accent else Color.Unspecified)
+            .pressScale(interaction, pressedScale = 0.9f)
+            .liquidGlass(CircleShape, tint = if (prominent) colors.accent else Color.Unspecified)
             .clickable(
                 interactionSource = interaction,
                 indication = null,
@@ -112,7 +113,8 @@ fun GlassTextButton(text: String, onClick: () -> Unit, modifier: Modifier = Modi
     Box(
         modifier = modifier
             .height(FloatingControlSize)
-            .liquidGlass(RoundedCornerShape(percent = 50), interaction, tint = if (prominent) colors.accent else Color.Unspecified)
+            .pressScale(interaction, pressedScale = 0.94f)
+            .liquidGlass(RoundedCornerShape(percent = 50), tint = if (prominent) colors.accent else Color.Unspecified)
             .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
             .padding(horizontal = 18.dp),
         contentAlignment = Alignment.Center,

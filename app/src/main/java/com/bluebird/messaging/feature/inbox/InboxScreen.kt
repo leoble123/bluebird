@@ -1,18 +1,5 @@
 package com.bluebird.messaging.feature.inbox
 
-import com.bluebird.messaging.core.designsystem.component.GlassButtonGroup
-import com.bluebird.messaging.core.designsystem.component.GlassIconButton
-import com.bluebird.messaging.core.designsystem.component.GlassSearchBar
-import com.bluebird.messaging.core.designsystem.component.GroupedIconButton
-import com.bluebird.messaging.core.designsystem.component.rememberAnchoredMenuPosition
-import com.bluebird.messaging.core.designsystem.theme.ScrollEdge
-import com.bluebird.messaging.core.designsystem.theme.scrollEdgeEffect
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.material3.Text
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.layout.union
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.height
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -24,16 +11,21 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -45,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -61,7 +54,11 @@ import com.bluebird.messaging.core.designsystem.component.BluebirdMenu
 import com.bluebird.messaging.core.designsystem.component.ConversationRow
 import com.bluebird.messaging.core.designsystem.component.ConversationRowDividerInset
 import com.bluebird.messaging.core.designsystem.component.EmptyState
+import com.bluebird.messaging.core.designsystem.component.GlassButtonGroup
+import com.bluebird.messaging.core.designsystem.component.GlassIconButton
+import com.bluebird.messaging.core.designsystem.component.GlassSearchBar
 import com.bluebird.messaging.core.designsystem.component.GroupAvatar
+import com.bluebird.messaging.core.designsystem.component.GroupedIconButton
 import com.bluebird.messaging.core.designsystem.component.LargeTitle
 import com.bluebird.messaging.core.designsystem.component.LoadingState
 import com.bluebird.messaging.core.designsystem.component.MenuDivider
@@ -71,12 +68,15 @@ import com.bluebird.messaging.core.designsystem.component.StatusPill
 import com.bluebird.messaging.core.designsystem.component.SwipeAction
 import com.bluebird.messaging.core.designsystem.component.SwipeActionRow
 import com.bluebird.messaging.core.designsystem.component.UndoBar
+import com.bluebird.messaging.core.designsystem.component.rememberAnchoredMenuPosition
 import com.bluebird.messaging.core.designsystem.icon.BluebirdIcons
 import com.bluebird.messaging.core.designsystem.theme.AvatarSize
 import com.bluebird.messaging.core.designsystem.theme.BluebirdTheme
 import com.bluebird.messaging.core.designsystem.theme.GlassHost
+import com.bluebird.messaging.core.designsystem.theme.ScrollEdge
 import com.bluebird.messaging.core.designsystem.theme.WindowClass
 import com.bluebird.messaging.core.designsystem.theme.glassSource
+import com.bluebird.messaging.core.designsystem.theme.scrollEdgeEffect
 
 private val TopBarHeight = 56.dp
 private val BottomBarHeight = 60.dp

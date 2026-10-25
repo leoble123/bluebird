@@ -22,11 +22,11 @@ data class BluebirdMotion(val reduced: Boolean) {
 
     /** Size and position changes, panels, list items appearing. */
     fun <T> gentle(): FiniteAnimationSpec<T> =
-        if (reduced) snap() else spring(dampingRatio = 1f, stiffness = Spring.StiffnessMediumLow)
+        if (reduced) snap() else spring(dampingRatio = 1f, stiffness = Spring.StiffnessMedium)
 
     /** The "settle": a single soft overshoot for things arriving (send button, new reaction). */
     fun <T> settle(): FiniteAnimationSpec<T> =
-        if (reduced) snap() else spring(dampingRatio = 0.55f, stiffness = 700f)
+        if (reduced) snap() else spring(dampingRatio = 0.62f, stiffness = 1100f)
 
     /** Opacity fades. */
     fun <T> fade(durationMillis: Int = Durations.STANDARD): FiniteAnimationSpec<T> =
@@ -37,8 +37,8 @@ data class BluebirdMotion(val reduced: Boolean) {
 
     object Durations {
         const val QUICK = 120
-        const val STANDARD = 220
-        const val EMPHASIZED = 320
+        const val STANDARD = 180
+        const val EMPHASIZED = 280
     }
 
     companion object {

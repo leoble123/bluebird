@@ -7,8 +7,8 @@ import com.bluebird.messaging.core.data.db.BluebirdDatabase
 import com.bluebird.messaging.core.provider.MockMessagingProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import java.time.Clock
 
 /**

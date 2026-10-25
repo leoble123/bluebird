@@ -1,7 +1,7 @@
 package com.bluebird.messaging.feature.conversation
 
-import com.bluebird.messaging.core.data.InMemoryDraftStore
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.bluebird.messaging.core.data.InMemoryDraftStore
 import com.bluebird.messaging.core.provider.MockMessagingProvider
 import com.bluebird.messaging.testing.TestData
 import kotlinx.coroutines.Dispatchers

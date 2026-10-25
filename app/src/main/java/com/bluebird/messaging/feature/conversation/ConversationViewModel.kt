@@ -13,8 +13,8 @@ import com.bluebird.messaging.core.model.DeliveryState
 import com.bluebird.messaging.core.model.Message
 import com.bluebird.messaging.core.provider.MessagingProvider
 import com.bluebird.messaging.feature.inbox.AvatarSpec
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
