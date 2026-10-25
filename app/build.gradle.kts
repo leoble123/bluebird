@@ -19,8 +19,10 @@ android {
         applicationId = "com.bluebird.messaging"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        // Cloud builds count up so each one installs as an update over the last; local builds stay at 1.
+        val buildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
+        versionCode = buildNumber ?: 1
+        versionName = if (buildNumber != null) "0.1.0 (build $buildNumber)" else "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

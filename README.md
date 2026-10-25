@@ -190,6 +190,24 @@ with the libraries' baseline profiles) but signed with the local debug key so it
 
 It is not for distribution; real release signing will be set up separately.
 
+## Updates over the air
+
+Every push to GitHub builds the app on GitHub's computers (`.github/workflows/release.yml`), runs all tests, and
+publishes the optimized APK on the repository's **Releases** page as "Bluebird build N". Open that page on the phone
+and tap the newest APK to update; your conversations are kept. For automatic update notifications, add the
+repository to the free Obtainium app.
+
+One-time setup, all on github.com:
+
+1. Create a **private** repository and push this project to it.
+2. In the repository: *Settings → Secrets and variables → Actions → New repository secret*. Name it
+   `SIGNING_KEY_BASE64` and paste the contents of `dist/signing-key-base64.txt` (created on the development PC,
+   never committed). This makes cloud builds carry the same signature as builds already on your devices; without
+   it Android would refuse to update them.
+
+Cloud builds are numbered and always newer than a local build, so after the first cloud build, install updates
+from GitHub rather than from this PC.
+
 ## Installing on a device
 
 1. On the phone or tablet, enable **Developer options** (tap *Build number* 7 times in *About phone*), then turn on

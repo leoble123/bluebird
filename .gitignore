@@ -13,3 +13,4 @@ app/build/
 *.aab
 *.keystore
 *.jks
+/dist/signing-key-base64.txt
